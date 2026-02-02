@@ -35,7 +35,7 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-[url('/images/wallpaper.jpg')] bg-cover bg-center p-6">
+    <div className="space-drift relative h-screen overflow-hidden bg-[url('/images/wallpaper.jpg')] bg-cover bg-center p-6">
       <div className="pointer-events-none absolute inset-0 bg-black/45" />
       <div className="relative grid h-full place-items-center">
       <form

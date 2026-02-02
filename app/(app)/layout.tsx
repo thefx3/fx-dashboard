@@ -1,4 +1,6 @@
 //app/(app)/layout.tsx
+import Header from "@/components/Header";
+import NavBar from "@/components/NavBar";
 import { getViewerServer } from "@/lib/auth/viewer.server";
 import { redirect } from "next/navigation";
 
@@ -6,8 +8,12 @@ export default async function AppLayout({ children,}: Readonly<{ children: React
     const { user } = await getViewerServer();
     if (!user) redirect("/login");
     return (
-        <div className="flex min-h-screen">
-            <main className="flex-1">{children}</main>
-        </div>
+    <div className="flex min-h-screen">
+      <NavBar />
+      <div className="flex min-h-screen flex-1 flex-col">
+        <Header email={user.email ?? "-"} />
+        <main className="flex-1">{children}</main>
+      </div>
+    </div>
     );
 }

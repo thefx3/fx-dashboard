@@ -155,3 +155,22 @@ body {
   color: var(--foreground);
   font-family: var(--var-font-sans);
 }
+
+/* Subtle drifting background for space effect */
+@keyframes space-drift {
+  0% {
+    background-position: 50% 50%;
+  }
+  50% {
+    background-position: 55% 45%;
+  }
+  100% {
+    background-position: 50% 50%;
+  }
+}
+
+.space-drift {
+  background-position: 50% 50%;
+  animation: space-drift 28s ease-in-out infinite;
+  will-change: background-position;
+}
