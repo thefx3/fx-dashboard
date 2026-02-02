@@ -4,14 +4,14 @@
   --background: #ffffff;
   --foreground: #171717;
 
-  --color1: #d6ebf5;
-  --color2: #add8eb;
-  --color3: #84c4e1;
-  --color4: #263353;
-  --color5: #364876;
-  --color6: #161d30;
-  --color7: #161d30;
-  --color8: #0f131f;
+  --color-light1: #d6ebf5;
+  --color-light2: #add8eb;
+  --color-light3: #84c4e1;
+  --color-dark1: #364876;
+  --color-dark2: #263353;
+  --color-dark3: #161d30;
+  --color-dark4: #161d30;
+  --color-dark5: #0f131f;
 }
 
 @theme inline {
