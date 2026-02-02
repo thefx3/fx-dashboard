@@ -4,15 +4,24 @@
    Palette + Fonts (base)
 ------------------------------ */
 :root {
-  /* Palette (tes couleurs brutes) */
-  --color-light1: #d6ebf5;
-  --color-light2: #add8eb;
-  --color-light3: #84c4e1;
+  /* Palette (base cosmique) */
+  --color-night: #0A1628; /* Bleu nuit profond */
+  --color-cosmos: #1E3A5F; /* Bleu cosmos */
+  --color-nebula: #E94B6C; /* Rose nébuleuse */
+  --color-stellar: #FF6B4A; /* Orange stellaire */
+  --color-celeste: #4A9FFF; /* Bleu céleste */
+  --color-violet: #8B5FAD; /* Violet spatial */
+  --color-turquoise: #2DD4BF; /* Turquoise */
+  --color-coral: #FFA69E; /* Corail doux */
+  --color-star: #E5E7EB; /* Gris étoilé */
+  --color-anthracite: #374151; /* Gris anthracite */
+  --color-white: #FFFFFF; /* Blanc pur */
 
-  --color-dark1: #364876;
-  --color-dark2: #263353;
-  --color-dark3: #161d30;
-  --color-dark4: #0f131f;
+  /* Nuanciers utiles */
+  --color-night-90: #0d1b33;
+  --color-cosmos-80: #26486f;
+  --color-cosmos-60: #2f567f;
+  --color-mist: #F6F8FC;
 
   /* Fonts */
   --var-font-title: Merriweather, serif;
@@ -22,33 +31,37 @@
      Shadcn tokens (LIGHT)
      (rôles UI, pas la palette)
   ------------------------------ */
-  --background: #f4f9fc;
-  --foreground: #101624;
+  --background: var(--color-mist);
+  --foreground: var(--color-night);
 
-  --card: #ffffff;
-  --card-foreground: #101624;
+  --card: var(--color-white);
+  --card-foreground: var(--color-night);
 
-  --popover: #ffffff;
-  --popover-foreground: #101624;
+  --popover: var(--color-white);
+  --popover-foreground: var(--color-night);
 
-  --muted: #e3f1f8;
-  --muted-foreground: rgba(16, 22, 36, 0.65);
+  --muted: var(--color-star);
+  --muted-foreground: rgba(55, 65, 81, 0.75);
 
-  --border: rgba(22, 35, 63, 0.14);
-  --input: rgba(22, 35, 63, 0.14);
-  --ring: rgba(54, 72, 118, 0.35);
+  --border: rgba(55, 65, 81, 0.18);
+  --input: rgba(55, 65, 81, 0.22);
+  --ring: rgba(74, 159, 255, 0.45);
 
-  --primary: #2f4477;
-  --primary-foreground: #ffffff;
+  --primary: var(--color-nebula);
+  --primary-foreground: var(--color-white);
 
-  --secondary: #bfe3f2;
-  --secondary-foreground: #16233f;
+  --secondary: var(--color-stellar);
+  --secondary-foreground: var(--color-night);
 
-  --accent: #8fc9e4;
-  --accent-foreground: #0f131f;
+  --accent: var(--color-celeste);
+  --accent-foreground: var(--color-night);
 
   --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: var(--color-white);
+
+  /* Custom (non-shadcn) */
+  --success: var(--color-turquoise);
+  --success-foreground: var(--color-night);
 
   /* Optionnel mais utile (arrondis cohérents UI) */
   --radius: 14px;
@@ -58,30 +71,33 @@
    Dark mode (next-themes ajoute class="dark" sur <html>)
 ------------------------------ */
 .dark {
-  --background: #0b1220;
-  --foreground: #e6edf7;
+  --background: var(--color-night);
+  --foreground: var(--color-white);
 
-  --card: #111a2e;
-  --card-foreground: #e6edf7;
+  --card: var(--color-cosmos);
+  --card-foreground: var(--color-white);
 
-  --popover: #121c31;
-  --popover-foreground: #e6edf7;
+  --popover: var(--color-cosmos);
+  --popover-foreground: var(--color-white);
 
-  --muted: rgba(132, 196, 225, 0.12);
-  --muted-foreground: rgba(230, 237, 247, 0.7);
+  --muted: rgba(30, 58, 95, 0.6);
+  --muted-foreground: rgba(229, 231, 235, 0.75);
 
-  --border: rgba(143, 201, 228, 0.18);
-  --input: rgba(143, 201, 228, 0.18);
-  --ring: rgba(132, 196, 225, 0.45);
+  --border: rgba(229, 231, 235, 0.18);
+  --input: rgba(229, 231, 235, 0.2);
+  --ring: rgba(74, 159, 255, 0.55);
 
-  --primary: #84c4e1;
-  --primary-foreground: #0f131f;
+  --primary: var(--color-nebula);
+  --primary-foreground: var(--color-white);
 
-  --secondary: #1f2d4f;
-  --secondary-foreground: #e6edf7;
+  --secondary: var(--color-stellar);
+  --secondary-foreground: var(--color-night);
 
-  --accent: #2f4c82;
-  --accent-foreground: #e6edf7;
+  --accent: var(--color-celeste);
+  --accent-foreground: var(--color-night);
+
+  --success: var(--color-turquoise);
+  --success-foreground: var(--color-night);
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
