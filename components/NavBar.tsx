@@ -28,17 +28,17 @@ const navLinkActiveClass =
     <aside className="hidden h-screen w-full shrink-0 border-r border-border/70 bg-card/90 text-foreground shadow-sm backdrop-blur lg:flex lg:w-64 lg:flex-col">
       <Link
         href="/"
-        className="mb-4 inline-flex items-center gap-3 px-6 pt-6 text-lg font-semibold uppercase tracking-[0.25em] text-foreground"
+        className="mb-8 inline-flex items-center gap-4 px-6 pt-6 text-lg font-semibold uppercase tracking-[0.25em] text-foreground"
       >
         <Image
           src={icon}
           alt="Logo"
-          width={56}
-          height={56}
+          width={45}
+          height={45}
           className={`h-14 w-14  ${activeRingClass}`}
           priority
         />
-        <span className="text-foreground">AIO</span>
+        <span className="text-2xl text-foreground">AIO</span>
       </Link>
 
       <nav className="flex flex-1 flex-col gap-3 px-4 pb-6">

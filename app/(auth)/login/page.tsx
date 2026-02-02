@@ -5,8 +5,8 @@ import LoginForm from "./LoginForm"
 import { getViewerServer } from "@/lib/auth/viewer.server";
 
 export default async function Login() {
-    // const { user } = await getViewerServer();
-    // if (user) redirect("/");
+    const { user } = await getViewerServer();
+    if (user) redirect("/");
 
     return (
         <LoginForm />

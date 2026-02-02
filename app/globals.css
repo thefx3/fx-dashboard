@@ -72,23 +72,23 @@
 ------------------------------ */
 .dark {
   --background: var(--color-night);
-  --foreground: var(--color-white);
+  --foreground: #f5f7ff;
 
-  --card: var(--color-cosmos);
-  --card-foreground: var(--color-white);
+  --card: var(--color-night-90);
+  --card-foreground: #f5f7ff;
 
-  --popover: var(--color-cosmos);
-  --popover-foreground: var(--color-white);
+  --popover: var(--color-cosmos-80);
+  --popover-foreground: #f5f7ff;
 
-  --muted: rgba(30, 58, 95, 0.6);
-  --muted-foreground: rgba(229, 231, 235, 0.75);
+  --muted: rgba(30, 58, 95, 0.45);
+  --muted-foreground: rgba(229, 231, 235, 0.7);
 
-  --border: rgba(229, 231, 235, 0.18);
-  --input: rgba(229, 231, 235, 0.2);
+  --border: rgba(229, 231, 235, 0.12);
+  --input: rgba(229, 231, 235, 0.14);
   --ring: rgba(74, 159, 255, 0.55);
 
-  --primary: var(--color-nebula);
-  --primary-foreground: var(--color-white);
+  --primary: var(--color-turquoise);
+  --primary-foreground: var(--color-night);
 
   --secondary: var(--color-stellar);
   --secondary-foreground: var(--color-night);
@@ -100,7 +100,7 @@
   --success-foreground: var(--color-night);
 
   --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: var(--color-white);
 }
 
 /* -----------------------------
