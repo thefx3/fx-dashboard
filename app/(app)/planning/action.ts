@@ -27,7 +27,7 @@ export async function addTask(formData: FormData) {
 
   if (insertErr) throw insertErr;
 
-  revalidatePath("/tasks");
+  revalidatePath("/planning");
 }
 
 export async function setTaskStatus(taskId: string, status: TaskStatus) {
@@ -41,7 +41,7 @@ export async function setTaskStatus(taskId: string, status: TaskStatus) {
 
   if (error) throw error;
 
-  revalidatePath("/tasks");
+  revalidatePath("/planning");
 }
 
 export async function deleteTask(taskId: string) {
@@ -50,7 +50,7 @@ export async function deleteTask(taskId: string) {
   const { error } = await supabase.from("tasks").delete().eq("id", taskId).eq("user_id", userId);
   if (error) throw error;
 
-  revalidatePath("/tasks");
+  revalidatePath("/planning");
 }
 
 export async function updateTask(taskId: string, formData: FormData) {
@@ -81,7 +81,7 @@ export async function updateTask(taskId: string, formData: FormData) {
 
   if (updateErr) throw updateErr;
 
-  revalidatePath("/tasks");
+  revalidatePath("/planning");
 }
 
 async function requireUser() {

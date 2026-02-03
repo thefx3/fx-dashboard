@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Activity, Ban, CheckCircle, Clock, List, Sun, type LucideIcon } from "lucide-react";
+import { Activity, Ban, CalendarDays, CheckCircle, Clock, List, Sun, type LucideIcon } from "lucide-react";
 import { addTask, deleteTask, setTaskStatus, updateTask } from "./action";
 import { TaskDoneCheckbox } from "./TaskDoneCheckbox";
 import {
@@ -56,6 +56,7 @@ const MODAL_PRIMARY_BUTTON_CLASS =
 const FILTER_ICONS: Record<TaskFilter, LucideIcon> = {
   all: List,
   today: Sun,
+  tomorrow: CalendarDays,
   doing: Activity,
   done: CheckCircle,
   upcoming: Clock,
@@ -77,7 +78,7 @@ export function TasksView({ tasks }: { tasks: TaskRow[] }) {
   return (
     <div className="space-y-6 w-full flex flex-col">
       <header className="flex items-center gap-4">
-        <h1 className="text-xl uppercase tracking-widest font-semibold leading-none">Mes tâches</h1>
+        <h1 className="text-xl uppercase tracking-widest font-semibold leading-none">Mon planning</h1>
         <div className="inline-flex h-10 items-center rounded-md border border-border bg-card p-1 text-sm gap-1">
           <button
             type="button"
@@ -161,7 +162,7 @@ function TaskFilterNav({
 }) {
   return (
     <aside className="w-48 shrink-0 border-r border-border">
-      <nav className="flex flex-col gap-1 text-sm">
+      <nav className="flex flex-col gap-2 text-sm">
         {FILTER_ORDER.map((filterKey) => {
           const Icon = FILTER_ICONS[filterKey];
           const isActive = filterKey === activeFilter;
@@ -572,6 +573,7 @@ function Modal({
 
 function filterTasks(tasks: TaskRow[], filter: TaskFilter) {
   const todayKey = toISODate(new Date());
+  const tomorrowKey = toISODate(addDays(new Date(), 1));
 
   if (filter === "all") {
     return tasks
@@ -583,6 +585,9 @@ function filterTasks(tasks: TaskRow[], filter: TaskFilter) {
     if (filter === "today") {
       return task.status === "todo" && task.due_date === todayKey;
     }
+    if (filter === "tomorrow") {
+      return task.status === "todo" && task.due_date === tomorrowKey;
+    }
     if (filter === "doing") {
       return task.status === "doing";
     }
@@ -590,7 +595,7 @@ function filterTasks(tasks: TaskRow[], filter: TaskFilter) {
       return task.status === "done";
     }
     if (filter === "upcoming") {
-      return task.status === "todo" && Boolean(task.due_date && task.due_date > todayKey);
+      return task.status === "todo" && Boolean(task.due_date && task.due_date > tomorrowKey);
     }
     if (filter === "unfinished") {
       return task.status === "unfinished";
@@ -601,9 +606,11 @@ function filterTasks(tasks: TaskRow[], filter: TaskFilter) {
 
 function getFilterCounts(tasks: TaskRow[]) {
   const todayKey = toISODate(new Date());
+  const tomorrowKey = toISODate(addDays(new Date(), 1));
   const counts: Record<TaskFilter, number> = {
     all: 0,
     today: 0,
+    tomorrow: 0,
     doing: 0,
     done: 0,
     upcoming: 0,
@@ -617,7 +624,8 @@ function getFilterCounts(tasks: TaskRow[]) {
     if (task.status === "unfinished") counts.unfinished += 1;
     if (task.status === "todo") {
       if (task.due_date === todayKey) counts.today += 1;
-      if (task.due_date && task.due_date > todayKey) counts.upcoming += 1;
+      if (task.due_date === tomorrowKey) counts.tomorrow += 1;
+      if (task.due_date && task.due_date > tomorrowKey) counts.upcoming += 1;
     }
   }
 
@@ -647,4 +655,10 @@ function formatMonthLabel(date: Date, withYear: boolean) {
     ...(withYear ? { year: "numeric" } : {}),
   });
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 }

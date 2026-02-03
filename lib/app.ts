@@ -21,9 +21,9 @@ export type NavLink = { href: string; label: string; Icon: LucideIcon};
 export const APP_NAV: Record<AppKey, NavLink[]> = {
   main: [
     { href: "/", label: "Home", Icon: HomeIcon },
-    { href: "/websites", label: "Mes sites", Icon: Globe2 },
-    { href: "/tasks", label: "Mes tâches", Icon: ListChecks },
-    { href: "/projects", label: "Mes projets", Icon: FolderKanban },
+    { href: "/websites", label: "Websites", Icon: Globe2 },
+    { href: "/planning", label: "Planning", Icon: ListChecks },
+    { href: "/projects", label: "Projets", Icon: FolderKanban },
     { href: "/clients", label: "Clients", Icon: Users },
     { href: "/settings", label: "Paramètres", Icon: Settings },
   ],
