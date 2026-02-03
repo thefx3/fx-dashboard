@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { TaskStatus } from "./utils";
-import { nextStatus } from "./utils";
+import { TaskStatus, isTaskStatus } from "./utils";
 
 export async function addTask(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -13,15 +12,12 @@ export async function addTask(formData: FormData) {
 
   if (!title) return;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  const user = data.user;
-  if (error || !user) throw new Error("Not authenticated");
+  const { supabase, userId } = await requireUser();
 
   const due_date = dueDateRaw ? dueDateRaw : null;
 
   const { error: insertErr } = await supabase.from("tasks").insert({
-    user_id: user.id,
+    user_id: userId,
     title,
     content: content || null,
     category: category || null,
@@ -34,27 +30,14 @@ export async function addTask(formData: FormData) {
   revalidatePath("/tasks");
 }
 
-
-export async function cycleTaskStatus(taskId: string, current: TaskStatus) {
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("tasks")
-    .update({ status: nextStatus(current) })
-    .eq("id", taskId);
-
-  if (error) throw error;
-
-  revalidatePath("/tasks");
-}
-
 export async function setTaskStatus(taskId: string, status: TaskStatus) {
-  const supabase = await createClient();
+  const { supabase, userId } = await requireUser();
 
   const { error } = await supabase
     .from("tasks")
     .update({ status })
-    .eq("id", taskId);
+    .eq("id", taskId)
+    .eq("user_id", userId);
 
   if (error) throw error;
 
@@ -62,9 +45,9 @@ export async function setTaskStatus(taskId: string, status: TaskStatus) {
 }
 
 export async function deleteTask(taskId: string) {
-  const supabase = await createClient();
+  const { supabase, userId } = await requireUser();
 
-  const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+  const { error } = await supabase.from("tasks").delete().eq("id", taskId).eq("user_id", userId);
   if (error) throw error;
 
   revalidatePath("/tasks");
@@ -79,10 +62,7 @@ export async function updateTask(taskId: string, formData: FormData) {
 
   if (!title) return;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  const user = data.user;
-  if (error || !user) throw new Error("Not authenticated");
+  const { supabase, userId } = await requireUser();
 
   const due_date = dueDateRaw ? dueDateRaw : null;
   const status = isTaskStatus(statusRaw) ? statusRaw : "todo";
@@ -97,13 +77,17 @@ export async function updateTask(taskId: string, formData: FormData) {
       status,
     })
     .eq("id", taskId)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (updateErr) throw updateErr;
 
   revalidatePath("/tasks");
 }
 
-function isTaskStatus(value: string): value is TaskStatus {
-  return value === "todo" || value === "doing" || value === "done" || value === "unfinished";
+async function requireUser() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  const user = data.user;
+  if (error || !user) throw new Error("Not authenticated");
+  return { supabase, userId: user.id };
 }
