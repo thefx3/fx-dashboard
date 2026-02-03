@@ -7,7 +7,6 @@ export default async function TasksPage() {
 
   const { data: userData, error: userErr } = await supabase.auth.getUser();
   if (userErr || !userData.user) {
-    // normalement ton (app)/layout redirect déjà, mais au cas où :
     return null;
   }
 

@@ -11,7 +11,7 @@ export type TaskRow = {
 };
 
 export type ViewMode = "list" | "calendar";
-export type TaskFilter = "all" | "today" | "doing" | "done" | "upcoming";
+export type TaskFilter = "all" | "today" | "doing" | "done" | "upcoming" | "unfinished";
 export const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 export const FILTER_LABELS: Record<TaskFilter, string> = {
@@ -20,6 +20,7 @@ export const FILTER_LABELS: Record<TaskFilter, string> = {
   doing: "En cours",
   done: "Terminés",
   upcoming: "À venir",
+  unfinished: "Abandonnées",
 };
 
 export function statusLabel(s: TaskStatus) {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { addTask, deleteTask, setTaskStatus } from "./action";
+import { useMemo, useState, type ReactNode } from "react";
+import { Activity, Ban, CheckCircle, Clock, List, Sun, type LucideIcon } from "lucide-react";
+import { addTask, deleteTask, setTaskStatus, updateTask } from "./action";
 import { TaskDoneCheckbox } from "./TaskDoneCheckbox";
 import { FILTER_LABELS, TaskFilter, TaskRow, TaskStatus, ViewMode, WEEKDAYS, statusLabel } from "./utils";
 
@@ -11,6 +12,75 @@ const STATUS_ORDER: Record<TaskStatus, number> = {
   done: 2,
   unfinished: 3,
 };
+
+const CALENDAR_BADGE_CLASS =
+  "cursor-pointer flex h-12 w-12 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm";
+
+const FILTER_ICONS: Record<TaskFilter, LucideIcon> = {
+  all: List,
+  today: Sun,
+  doing: Activity,
+  done: CheckCircle,
+  upcoming: Clock,
+  unfinished: Ban,
+};
+
+//MAIN COMPONENT
+export function TasksView({ tasks }: { tasks: TaskRow[] }) {
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [filter, setFilter] = useState<TaskFilter>("today");
+
+  return (
+    <div className="space-y-6 w-full flex flex-col">
+      <header className="flex items-center gap-4">
+        <h1 className="text-xl uppercase tracking-widest font-semibold leading-none">Mes tâches</h1>
+        <div className="inline-flex h-10 items-center rounded-md border border-border bg-card p-1 text-sm gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            className={
+              viewMode === "list"
+                ? "font-bold btn-tab--active cursor-pointer h-8 rounded-md px-3 bg-accent/20 shadow-md"
+                : "cursor-pointer h-8 px-3 rounded-md hover:bg-primary/20"
+            }
+          >
+            Liste
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            className={
+              viewMode === "calendar"
+                ? "font-bold btn-tab--active cursor-pointer h-8 rounded-md px-3 bg-accent/20 shadow-md"
+                : "cursor-pointer h-8 px-3 rounded-md hover:bg-primary/20"
+            }
+          >
+            Calendrier
+          </button>
+        </div>
+      </header>
+
+
+      <div className="flex flex-1 w-full">
+        {viewMode === "list" ? (
+          <div className="flex w-full gap-6">
+            <TaskFilterNav activeFilter={filter} onChange={setFilter} />
+          
+            <div className="space-y-4 w-full">
+              <AddTaskForm />
+              <div className="flex gap-6">
+                <TaskList tasks={filterTasks(tasks, filter)} showStatus={filter === "all"} />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <CalendarView tasks={tasks} />
+        )}
+      </div>
+
+    </div>
+  );
+}
 
 function AddTaskForm() {
   return (
@@ -49,79 +119,34 @@ function AddTaskForm() {
   );
 }
 
-export function TasksView({ tasks }: { tasks: TaskRow[] }) {
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [filter, setFilter] = useState<TaskFilter>("today");
-
-  return (
-    <div className="space-y-6 w-full flex flex-col">
-      <header className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold leading-none">Mes tâches</h1>
-        <div className="inline-flex h-8 items-center rounded-sm border border-border bg-card p-1 text-sm gap-1">
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            className={
-              viewMode === "list"
-                ? "cursor-pointer h-6 rounded-sm px-3 bg-accent/20"
-                : "cursor-pointer h-6 px-3 rounded-sm hover:bg-primary/20"
-            }
-          >
-            Liste
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("calendar")}
-            className={
-              viewMode === "calendar"
-                ? "cursor-pointer h-6 rounded-sm px-3 bg-accent/20"
-                : "cursor-pointer h-6 px-3 rounded-sm hover:bg-primary/20"
-            }
-          >
-            Calendrier
-          </button>
-        </div>
-      </header>
-
-
-      <div className="flex flex-1 w-full">
-        {viewMode === "list" ? (
-          <div className="flex w-full gap-6">
-            <TaskFilterNav activeFilter={filter} onChange={setFilter} />
-          
-            <div className="space-y-4 w-full">
-              <AddTaskForm />
-              <div className="flex gap-6">
-                <TaskList tasks={filterTasks(tasks, filter)} showStatus={filter === "all"} />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <CalendarView tasks={tasks} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TaskFilterNav({ activeFilter,onChange, }: { activeFilter: TaskFilter; onChange: (filter: TaskFilter) => void; }) {
+function TaskFilterNav({
+  activeFilter,
+  onChange,
+}: {
+  activeFilter: TaskFilter;
+  onChange: (filter: TaskFilter) => void;
+}) {
   return (
     <aside className="w-48 shrink-0 border-r border-border">
       <nav className="flex flex-col gap-1 text-sm">
-        {(Object.keys(FILTER_LABELS) as TaskFilter[]).map((filterKey) => (
-          <button
-            key={filterKey}
-            type="button"
-            onClick={() => onChange(filterKey)}
-            className={
-              filterKey === activeFilter
-                ? "bg-muted px-3 py-2 text-left"
-                : "px-3 py-2 text-left hover:bg-primary/20"
-            }
-          >
-            {FILTER_LABELS[filterKey]}
-          </button>
-        ))}
+        {(Object.keys(FILTER_LABELS) as TaskFilter[]).map((filterKey) => {
+          const Icon = FILTER_ICONS[filterKey];
+          return (
+            <button
+              key={filterKey}
+              type="button"
+              onClick={() => onChange(filterKey)}
+              className={
+                filterKey === activeFilter
+                  ? "flex items-center gap-2 bg-muted px-3 py-2 text-left"
+                  : "flex items-center gap-2 px-3 py-2 text-left hover:bg-primary/20"
+              }
+            >
+              <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <span>{FILTER_LABELS[filterKey]}</span>
+            </button>
+          );
+        })}
       </nav>
     </aside>
   );
@@ -188,19 +213,25 @@ function TaskCard({ task, showStatus }: { task: TaskRow; showStatus?: boolean })
           </button>
         </form>
       </div>
+
     </div>
   );
 }
 
 function CalendarView({ tasks }: { tasks: TaskRow[] }) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
   const today = new Date();
-  const year = today.getFullYear();
-  const monthIndex = today.getMonth();
+  const [calendarDate, setCalendarDate] = useState(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+  );
+  const year = calendarDate.getFullYear();
+  const monthIndex = calendarDate.getMonth();
 
-  const monthName = today.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-  const startOfMonth = new Date(year, monthIndex, 1);
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  const startWeekday = (startOfMonth.getDay() + 6) % 7; // Monday-based index
+  const monthName = calendarDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const monthLabel = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+  const monthOnly = calendarDate.toLocaleDateString("fr-FR", { month: "long" });
+  const monthOnlyLabel = monthOnly.charAt(0).toUpperCase() + monthOnly.slice(1);
 
   const tasksByDate = useMemo(() => {
     const map = new Map<string, TaskRow[]>();
@@ -213,26 +244,74 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
     return map;
   }, [tasks]);
 
-  const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
-  const blanks = Array.from({ length: startWeekday });
   const todayKey = toISODate(today);
+  const calendarCells = buildCalendarCells(year, monthIndex);
 
   return (
-    <div className="space-y-3">
-      <div className="text-sm text-muted-foreground capitalize">{monthName}</div>
-      <div className="grid grid-cols-7 gap-2 text-xs text-muted-foreground">
+    <div className="w-full rounded-t-xl border border-border bg-card">
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedDate(null);
+              setSelectedTask(null);
+              setCalendarDate(new Date(today.getFullYear(), today.getMonth(), 1));
+            }}
+            className={CALENDAR_BADGE_CLASS}
+            aria-label="Revenir au mois courant"
+          >
+            <span className="text-[10px] font-semibold uppercase">
+              {today.toLocaleDateString("fr-FR", { month: "short" })}
+            </span>
+            <span className="text-base font-bold leading-none">{today.getDate()}</span>
+          </button>
+          <div className="leading-tight">
+            <div className="text-sm font-semibold text-foreground">{monthLabel}</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-lg font-medium capitalize text-accent">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedDate(null);
+              setSelectedTask(null);
+              setCalendarDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+            }}
+            className="cursor-pointer px-2 py-1 text-md hover:bg-muted"
+            aria-label="Mois précédent"
+          >
+            {"<"}
+          </button>
+          <span className="text-md text-foreground font-bold">{monthOnlyLabel}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedDate(null);
+              setSelectedTask(null);
+              setCalendarDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+            }}
+            className="cursor-pointer px-2 py-1 text-md hover:bg-muted"
+            aria-label="Mois suivant"
+          >
+            {">"}
+          </button>
+        </div>
+      </div>
+
+      {/* Weekday Headers */}
+      <div className="grid grid-cols-7 text-md uppercase text-primary/90">
         {WEEKDAYS.map((weekday) => (
-          <div key={weekday} className="text-center">
+          <div key={weekday} className="font-bold text-center border border-border bg-primary/50 px-2 py-1">
             {weekday}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-2">
-        {blanks.map((_, index) => (
-          <div key={`blank-${index}`} className="min-h-24 rounded-md border border-transparent" />
-        ))}
-        {days.map((day) => {
-          const dateKey = toISODate(new Date(year, monthIndex, day));
+
+      <div className="grid grid-cols-7 ">
+        {calendarCells.map((cell) => {
+          const dateKey = toISODate(cell.date);
           const dayTasks = tasksByDate.get(dateKey) ?? [];
           const isToday = dateKey === todayKey;
 
@@ -241,24 +320,37 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
               key={dateKey}
               className={
                 isToday
-                  ? "min-h-24 rounded-md border border-primary bg-primary/5 p-2"
-                  : "min-h-24 rounded-md border border-border bg-card p-2"
+                  ? "min-h-28 border border-primary bg-primary/5 p-2"
+                  : cell.inCurrentMonth
+                  ? "min-h-28 border border-border bg-card p-2"
+                  : "min-h-28 border border-border bg-muted/20 p-2 text-muted-foreground"
               }
             >
-              <div className="text-xs font-medium">{day}</div>
+              <button
+                type="button"
+                onClick={() => setSelectedDate(dateKey)}
+                className="rounded-full border border-border px-2 py-0.5 text-xs font-medium hover:bg-accent/20"
+              >
+                {cell.day}
+              </button>
               <div className="mt-1 space-y-1">
                 {dayTasks.slice(0, 2).map((task) => (
-                  <div
+                  <button
                     key={task.id}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedTask(task);
+                    }}
                     className={
                       task.status === "done"
-                        ? "truncate text-xs text-muted-foreground line-through"
-                        : "truncate text-xs"
+                        ? "block w-full truncate text-left text-xs text-muted-foreground line-through"
+                        : "block w-full truncate text-left text-xs"
                     }
                     title={task.title}
                   >
                     {task.title}
-                  </div>
+                  </button>
                 ))}
                 {dayTasks.length > 2 && (
                   <div className="text-xs text-muted-foreground">+{dayTasks.length - 2} autres</div>
@@ -267,6 +359,204 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
             </div>
           );
         })}
+      </div>
+
+      {selectedDate && (
+        <Modal title={`Tâches du ${formatDate(selectedDate)}`} onClose={() => setSelectedDate(null)}>
+          <DayTasksList
+            tasks={tasksByDate.get(selectedDate) ?? []}
+            onSelectTask={(task) => {
+              setSelectedDate(null);
+              setSelectedTask(task);
+            }}
+          />
+        </Modal>
+      )}
+
+      {selectedTask && <TaskEditModal task={selectedTask} onClose={() => setSelectedTask(null)} />}
+    </div>
+  );
+}
+
+function buildCalendarCells(year: number, monthIndex: number) {
+  const startOfMonth = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const startWeekday = (startOfMonth.getDay() + 6) % 7; // Monday-based index
+  const prevMonthDays = new Date(year, monthIndex, 0).getDate();
+
+  const totalCells = startWeekday + daysInMonth;
+  const trailingDays = (7 - (totalCells % 7)) % 7;
+
+  const cells: { date: Date; day: number; inCurrentMonth: boolean }[] = [];
+
+  for (let i = 0; i < startWeekday; i += 1) {
+    const day = prevMonthDays - startWeekday + i + 1;
+    cells.push({
+      date: new Date(year, monthIndex - 1, day),
+      day,
+      inCurrentMonth: false,
+    });
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push({
+      date: new Date(year, monthIndex, day),
+      day,
+      inCurrentMonth: true,
+    });
+  }
+
+  for (let day = 1; day <= trailingDays; day += 1) {
+    cells.push({
+      date: new Date(year, monthIndex + 1, day),
+      day,
+      inCurrentMonth: false,
+    });
+  }
+
+  return cells;
+}
+
+function DayTasksList({
+  tasks,
+  onSelectTask,
+}: {
+  tasks: TaskRow[];
+  onSelectTask: (task: TaskRow) => void;
+}) {
+  if (!tasks.length) {
+    return <p className="text-sm text-muted-foreground">Aucune tâche ce jour-là.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {tasks.map((task) => (
+        <button
+          key={task.id}
+          type="button"
+          onClick={() => onSelectTask(task)}
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-left hover:bg-muted"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium">{task.title}</span>
+            <span className="text-xs text-muted-foreground">{statusLabel(task.status)}</span>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {task.category && <span>{task.category}</span>}
+            {task.due_date && <span>Limite: {task.due_date}</span>}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }) {
+  const updateAction = updateTask.bind(null, task.id);
+
+  return (
+    <Modal title="Modifier la tâche" onClose={onClose}>
+      <form action={updateAction} className="space-y-3">
+        <div className="grid gap-1">
+          <label className="text-sm font-medium">Titre</label>
+          <input
+            name="title"
+            defaultValue={task.title}
+            required
+            className="h-9 rounded-md border border-input bg-background px-3"
+          />
+        </div>
+
+        <div className="grid gap-1">
+          <label className="text-sm font-medium">Statut</label>
+          <select
+            name="status"
+            defaultValue={task.status}
+            className="h-9 rounded-md border border-input bg-background px-2"
+          >
+            <option value="todo">À faire</option>
+            <option value="doing">En cours</option>
+            <option value="done">Terminé</option>
+            <option value="unfinished">Abandonné</option>
+          </select>
+        </div>
+
+        <div className="grid gap-1">
+          <label className="text-sm font-medium">Catégorie</label>
+          <input
+            name="category"
+            defaultValue={task.category ?? ""}
+            className="h-9 rounded-md border border-input bg-background px-3"
+          />
+        </div>
+
+        <div className="grid gap-1">
+          <label className="text-sm font-medium">Échéance</label>
+          <input
+            name="due_date"
+            type="date"
+            defaultValue={task.due_date ?? ""}
+            className="h-9 rounded-md border border-input bg-background px-2"
+          />
+        </div>
+
+        <div className="grid gap-1">
+          <label className="text-sm font-medium">Contenu</label>
+          <textarea
+            name="content"
+            defaultValue={task.content ?? ""}
+            className="min-h-20 rounded-md border border-input bg-background px-3 py-2"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 rounded-md border border-border px-4 hover:bg-muted"
+          >
+            Annuler
+          </button>
+          <button className="h-9 rounded-md bg-primary px-4 text-primary-foreground">
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-xl bg-card p-4 shadow-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Fermer
+          </button>
+        </div>
+        <div className="mt-4 space-y-3">{children}</div>
       </div>
     </div>
   );
@@ -292,6 +582,9 @@ function filterTasks(tasks: TaskRow[], filter: TaskFilter) {
     if (filter === "upcoming") {
       return task.status === "todo" && Boolean(task.due_date && task.due_date > todayKey);
     }
+    if (filter === "unfinished") {
+      return task.status === "unfinished";
+    }
     return true;
   });
 }
@@ -301,4 +594,14 @@ function toISODate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatDate(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(year, (month ?? 1) - 1, day ?? 1);
+  return date.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
