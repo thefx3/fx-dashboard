@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Activity, Ban, CalendarDays, CheckCircle, Clock, List, Sun, type LucideIcon } from "lucide-react";
 import { addTask, deleteTask, setTaskStatus, updateTask } from "./action";
 import { TaskDoneCheckbox } from "./TaskDoneCheckbox";
@@ -71,6 +71,7 @@ const VIEW_TOGGLE_INACTIVE_CLASS = "hover:bg-primary/20";
 export function TasksView({ tasks }: { tasks: TaskRow[] }) {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [filter, setFilter] = useState<TaskFilter>("today");
+  const [selectedListTask, setSelectedListTask] = useState<TaskRow | null>(null);
   const filteredTasks = useMemo(() => filterTasks(tasks, filter), [tasks, filter]);
   const showStatus = filter === "all";
   const filterCounts = useMemo(() => getFilterCounts(tasks), [tasks]);
@@ -113,7 +114,11 @@ export function TasksView({ tasks }: { tasks: TaskRow[] }) {
           
             <div className="space-y-4 w-full">
               <AddTaskForm />
-              <TaskList tasks={filteredTasks} showStatus={showStatus} />
+              <TaskList
+                tasks={filteredTasks}
+                showStatus={showStatus}
+                onTaskClick={(task) => setSelectedListTask(task)}
+              />
             </div>
           </div>
         ) : (
@@ -121,6 +126,9 @@ export function TasksView({ tasks }: { tasks: TaskRow[] }) {
         )}
       </div>
 
+      {viewMode === "list" && selectedListTask && (
+        <TaskEditModal task={selectedListTask} onClose={() => setSelectedListTask(null)} />
+      )}
     </div>
   );
 }
@@ -191,7 +199,15 @@ function TaskFilterNav({
   );
 }
 
-function TaskList({ tasks, showStatus }: { tasks: TaskRow[]; showStatus?: boolean }) {
+function TaskList({
+  tasks,
+  showStatus,
+  onTaskClick,
+}: {
+  tasks: TaskRow[];
+  showStatus?: boolean;
+  onTaskClick?: (task: TaskRow) => void;
+}) {
   if (!tasks.length) {
     return <p className="text-sm text-muted-foreground">Aucune tâche pour le moment.</p>;
   }
@@ -199,21 +215,51 @@ function TaskList({ tasks, showStatus }: { tasks: TaskRow[]; showStatus?: boolea
   return (
     <div className="flex-1 space-y-2">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} showStatus={showStatus} />
+        <TaskCard
+          key={task.id}
+          task={task}
+          showStatus={showStatus}
+          onClick={onTaskClick ? () => onTaskClick(task) : undefined}
+        />
       ))}
     </div>
   );
 }
 
-function TaskCard({ task, showStatus }: { task: TaskRow; showStatus?: boolean }) {
+function TaskCard({
+  task,
+  showStatus,
+  onClick,
+}: {
+  task: TaskRow;
+  showStatus?: boolean;
+  onClick?: () => void;
+}) {
   const abandonAction = setTaskStatus.bind(null, task.id, "unfinished");
   const doingAction = setTaskStatus.bind(null, task.id, "doing");
   const deleteAction = deleteTask.bind(null, task.id);
 
   return (
-    <div className={CARD_CLASS}>
+    <div
+      className={`${CARD_CLASS} ${onClick ? "cursor-pointer hover:border-primary/40" : ""}`}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <div className="flex gap-2 items-center">
-        <TaskDoneCheckbox taskId={task.id} status={task.status} />
+        <span onClick={(event) => event.stopPropagation()}>
+          <TaskDoneCheckbox taskId={task.id} status={task.status} />
+        </span>
         <p className="font-medium truncate">{task.title}</p>
         {showStatus && <span className={STATUS_BADGE_CLASS}>{statusLabel(task.status)}</span>}
       </div>
@@ -225,7 +271,7 @@ function TaskCard({ task, showStatus }: { task: TaskRow; showStatus?: boolean })
         )}
       </div>
 
-      <div className="flex flex-1 gap-2 justify-end items-center">
+      <div className="flex flex-1 gap-2 justify-end items-center" onClick={(event) => event.stopPropagation()}>
         <form action={abandonAction}>
           <button className={ACTION_BUTTON_CLASS}>Abandonner</button>
         </form>
@@ -473,14 +519,29 @@ function DayTasksList({
 }
 
 function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }) {
-  const updateAction = updateTask.bind(null, task.id);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    startTransition(async () => {
+      await updateTask(task.id, formData);
+      onClose();
+    });
+  };
 
   return (
     <Modal title="Modifier" onClose={onClose}>
-      <form action={updateAction} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid gap-1">
           <label className="text-sm font-medium">Titre</label>
-          <input name="title" defaultValue={task.title} required className={MODAL_INPUT_CLASS} />
+          <input
+            name="title"
+            defaultValue={task.title}
+            required
+            className={MODAL_INPUT_CLASS}
+            disabled={isPending}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -490,6 +551,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
               name="status"
               defaultValue={task.status}
               className={MODAL_SELECT_CLASS}
+              disabled={isPending}
             >
               {TASK_STATUS_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -501,7 +563,12 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
 
           <div className="grid gap-1">
             <label className="text-sm font-medium">Catégorie</label>
-            <input name="category" defaultValue={task.category ?? ""} className={MODAL_INPUT_CLASS} />
+            <input
+              name="category"
+              defaultValue={task.category ?? ""}
+              className={MODAL_INPUT_CLASS}
+              disabled={isPending}
+            />
           </div>
         </div>
 
@@ -512,12 +579,18 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
             type="date"
             defaultValue={task.due_date ?? ""}
             className={MODAL_SELECT_CLASS}
+            disabled={isPending}
           />
         </div>
 
         <div className="grid gap-1">
           <label className="text-sm font-medium">Contenu</label>
-          <textarea name="content" defaultValue={task.content ?? ""} className={MODAL_TEXTAREA_CLASS} />
+          <textarea
+            name="content"
+            defaultValue={task.content ?? ""}
+            className={MODAL_TEXTAREA_CLASS}
+            disabled={isPending}
+          />
         </div>
 
         <div className="flex justify-end gap-2">
@@ -525,10 +598,13 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
             type="button"
             onClick={onClose}
             className={MODAL_CANCEL_BUTTON_CLASS}
+            disabled={isPending}
           >
             Annuler
           </button>
-          <button className={MODAL_PRIMARY_BUTTON_CLASS}>Enregistrer</button>
+          <button className={MODAL_PRIMARY_BUTTON_CLASS} disabled={isPending}>
+            {isPending ? "Enregistrement..." : "Enregistrer"}
+          </button>
         </div>
       </form>
     </Modal>

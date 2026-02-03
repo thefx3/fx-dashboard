@@ -23,6 +23,7 @@ export function TaskDoneCheckbox({ taskId, status }: TaskDoneCheckboxProps) {
       aria-label="Marquer comme terminé"
       checked={checked}
       disabled={isPending}
+      onClick={(event) => event.stopPropagation()}
       onChange={(event) => {
         const isChecked = event.target.checked;
         const nextStatus: TaskStatus = isChecked ? "done" : "todo";
