@@ -1,7 +1,27 @@
-export default function TasksPage() {
-    return (
-        <div>
-            Tasks Page
-        </div>
-    )
+import { createClient } from "@/lib/supabase/server";
+import { TasksView } from "./TasksView";
+import { TaskRow } from "./utils";
+
+export default async function TasksPage() {
+  const supabase = await createClient();
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData.user) {
+    // normalement ton (app)/layout redirect déjà, mais au cas où :
+    return null;
+  }
+
+  const { data: tasks, error } = await supabase
+    .from("tasks")
+    .select("id,title,content,category,due_date,status,created_at")
+    .order("created_at", { ascending: false })
+    .returns<TaskRow[]>();
+
+  if (error) throw error;
+
+  return (
+    <div className="p-6">
+      <TasksView tasks={tasks ?? []} />
+    </div>
+  );
 }
