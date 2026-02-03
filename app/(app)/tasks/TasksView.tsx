@@ -371,7 +371,7 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
       </div>
 
       {selectedDate && (
-        <Modal title={`Tâches du ${formatDate(selectedDate)}`} onClose={() => setSelectedDate(null)}>
+        <Modal title={`${formatDate(selectedDate)}`} onClose={() => setSelectedDate(null)}>
           <DayTasksList
             tasks={tasksByDate.get(selectedDate) ?? []}
             onSelectTask={(task) => {
@@ -445,7 +445,7 @@ function DayTasksList({
   onSelectTask: (task: TaskRow) => void;
 }) {
   if (!tasks.length) {
-    return <p className="text-sm text-muted-foreground">Aucune tâche ce jour-là.</p>;
+    return <p className="text-sm text-muted-foreground">Rien ce jour-là.</p>;
   }
 
   return (
