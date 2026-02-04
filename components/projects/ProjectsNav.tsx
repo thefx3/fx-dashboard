@@ -46,7 +46,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
                 href={href}
                 aria-current={isActive ? "page" : undefined}
                 className={[
-                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left",
+                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left uppercase tracking-wide font-medium",
                   isActive
                     ? "bg-foreground text-accent shadow-md"
                     : "hover:bg-primary/20",

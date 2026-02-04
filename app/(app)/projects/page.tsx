@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import ProjectEditDetails from "@/components/projects/ProjectEditDetails";
 import { createProject, deleteProject, updateProject } from "./actions";
 
 type ProjectRow = {
@@ -53,24 +54,11 @@ export default async function ProjectsIndexPage() {
                     Ouvrir
                   </Link>
 
-                  <details className="relative">
-                    <summary className="list-none inline-flex h-8 cursor-pointer items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted">
-                      Modifier
-                    </summary>
-                    <div className="absolute right-0 z-10 mt-2 w-64 rounded-md border border-border bg-background p-3 shadow-lg">
-                      <form action={updateProject} className="flex flex-col gap-2">
-                        <input type="hidden" name="id" value={project.id} />
-                        <input
-                          name="name"
-                          defaultValue={project.name}
-                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
-                        <button className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-sm text-primary-foreground">
-                          Enregistrer
-                        </button>
-                      </form>
-                    </div>
-                  </details>
+                  <ProjectEditDetails
+                    projectId={project.id}
+                    defaultName={project.name}
+                    updateAction={updateProject}
+                  />
 
                   <form action={deleteProject}>
                     <input type="hidden" name="id" value={project.id} />
@@ -86,9 +74,6 @@ export default async function ProjectsIndexPage() {
 
         <div className="rounded-xl border border-dashed border-border bg-card p-4">
           <div className="text-sm font-medium">Ajouter un projet</div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Crée un nouveau projet pour commencer.
-          </p>
           <form action={createProject} className="mt-3 flex flex-col gap-3">
             <input
               name="name"
