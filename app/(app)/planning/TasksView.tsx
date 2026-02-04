@@ -159,14 +159,8 @@ function AddTaskForm() {
   );
 }
 
-function TaskFilterNav({
-  activeFilter,
-  onChange,
-  counts,
-}: {
-  activeFilter: TaskFilter;
-  onChange: (filter: TaskFilter) => void;
-  counts: Record<TaskFilter, number>;
+function TaskFilterNav({ activeFilter, onChange, counts,
+}: { activeFilter: TaskFilter; onChange: (filter: TaskFilter) => void; counts: Record<TaskFilter, number>;
 }) {
   return (
     <aside className="w-48 shrink-0 border-r border-border">

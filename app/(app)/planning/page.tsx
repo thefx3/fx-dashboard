@@ -19,7 +19,7 @@ export default async function TasksPage() {
   if (error) throw error;
 
   return (
-    <div className="p-6">
+    <div className="w-full">
       <TasksView tasks={tasks ?? []} />
     </div>
   );

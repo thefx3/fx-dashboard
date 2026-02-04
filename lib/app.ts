@@ -28,3 +28,5 @@ export const APP_NAV: Record<AppKey, NavLink[]> = {
     { href: "/settings", label: "Paramètres", Icon: Settings },
   ],
 } as const;
+
+

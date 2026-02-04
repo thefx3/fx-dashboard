@@ -43,7 +43,7 @@ export default function LoginForm() {
         className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm"
       >
         <div className="bg-popover-foreground px-6 py-5 text-primary-foreground">
-          <h1 className="font-title text-2xl uppercase tracking-widest">MY UNIVERSE</h1>
+          <h1 className="font-title text-2xl uppercase tracking-widest">MySpace</h1>
           <p className="mt-1 text-sm text-accent/90">
             Accès réservé
           </p>
