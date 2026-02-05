@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const TABS = [
   { label: "Publications", segment: "posts" },
@@ -13,9 +14,16 @@ const TABS = [
 
 export default function ProjectTab({ slug }: { slug?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const resolvedSlug = slug ?? (pathname ? pathname.split("/")[2] : undefined);
 
   if (!resolvedSlug) return null;
+
+  useEffect(() => {
+    const hrefs = TABS.map((tab) => `/projects/${resolvedSlug}/${tab.segment}`);
+    hrefs.forEach((href) => router.prefetch(href));
+  }, [resolvedSlug, router]);
+
   return (
     <div className="h-12 w-full grid grid-cols-6 shrink-0 border-b border-border">
       {TABS.map((tab) => {
@@ -25,6 +33,7 @@ export default function ProjectTab({ slug }: { slug?: string }) {
           <Link
             key={tab.segment}
             href={href}
+            prefetch
             aria-current={isActive ? "page" : undefined}
             className={[
               "flex items-center justify-center text-md transition",

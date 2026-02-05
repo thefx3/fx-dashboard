@@ -1,4 +1,5 @@
 import ProjectNotesEditor from "@/components/projects/ProjectNotesEditor";
+import ProjectTasksPanel from "@/components/projects/ProjectTasksPanel";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -17,10 +18,15 @@ type TaskRow = {
 
 export default async function NotesView({
   params,
+  searchParams,
 }: {
   params: { slug: string } | Promise<{ slug: string }>;
+  searchParams?: { tasks?: string } | Promise<{ tasks?: string }>;
 }) {
   const resolvedParams = await Promise.resolve(params);
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const taskFilter =
+    resolvedSearchParams?.tasks === "done" ? "done" : "open";
   const supabase = await createClient();
 
   const { data: userData, error: userErr } = await supabase.auth.getUser();
@@ -70,75 +76,16 @@ export default async function NotesView({
   return (
     <div className="p-6 space-y-6">
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
-        <section className="rounded-xl border border-border bg-card p-4">
-          <div className="text-sm font-semibold uppercase tracking-widest">Taches a faire</div>
-
-          {tasksColumnMissing ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Ajoute la colonne <code>project_id</code> dans <code>tasks</code> pour activer les
-              taches par projet.
-            </p>
-          ) : (
-            <>
-              <form
-                action={addProjectTask}
-                className="mt-4 flex items-center gap-2"
-              >
-                <input type="hidden" name="project_id" value={project.id} />
-                <input type="hidden" name="project_slug" value={resolvedParams.slug} />
-                <input
-                  name="title"
-                  required
-                  placeholder="Nouvelle tache"
-                  className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm"
-                />
-                <button className="h-9 rounded-md bg-primary px-4 text-sm text-primary-foreground">
-                  Ajouter
-                </button>
-              </form>
-
-              <div className="mt-4 space-y-2">
-                {tasks.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Aucune tache pour ce projet.</p>
-                ) : (
-                  tasks.map((task) => {
-                    const isDone = task.status === "done";
-                    return (
-                      <div
-                        key={task.id}
-                        className="flex items-center gap-2 rounded-md border border-border px-3 py-2"
-                      >
-                        <form action={setProjectTaskStatus}>
-                          <input type="hidden" name="task_id" value={task.id} />
-                          <input type="hidden" name="project_slug" value={resolvedParams.slug} />
-                          <input
-                            type="hidden"
-                            name="status"
-                            value={isDone ? "todo" : "done"}
-                          />
-                          <button
-                            className="h-5 w-5 rounded border border-border"
-                            aria-label={isDone ? "Marquer comme a faire" : "Marquer comme termine"}
-                          />
-                        </form>
-                        <span className={isDone ? "text-sm line-through text-muted-foreground" : "text-sm"}>
-                          {task.title}
-                        </span>
-                        <form action={deleteProjectTask} className="ml-auto">
-                          <input type="hidden" name="task_id" value={task.id} />
-                          <input type="hidden" name="project_slug" value={resolvedParams.slug} />
-                          <button className="text-xs text-muted-foreground hover:text-foreground">
-                            Supprimer
-                          </button>
-                        </form>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </>
-          )}
-        </section>
+        <ProjectTasksPanel
+          tasks={tasks}
+          projectId={project.id}
+          projectSlug={resolvedParams.slug}
+          tasksColumnMissing={tasksColumnMissing}
+          initialFilter={taskFilter}
+          addAction={addProjectTask}
+          setStatusAction={setProjectTaskStatus}
+          deleteAction={deleteProjectTask}
+        />
 
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="text-sm font-semibold uppercase tracking-widest">Notes</div>
