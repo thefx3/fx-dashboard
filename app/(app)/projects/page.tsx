@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ProjectEditDetails from "@/components/projects/ProjectEditDetails";
 import ProjectIconPicker from "@/components/projects/ProjectIconPicker";
+import ProjectDeleteDialog from "@/components/projects/ProjectDeleteDialog";
 import { DEFAULT_PROJECT_ICON } from "@/lib/projects/icons";
 import { createProject, deleteProject, updateProject, updateProjectWithSlug } from "./actions";
 
@@ -66,12 +67,11 @@ export default async function ProjectsIndexPage() {
                     updateSlugAction={updateProjectWithSlug}
                   />
 
-                  <form action={deleteProject} className="w-full sm:w-auto">
-                    <input type="hidden" name="id" value={project.id} />
-                    <button className="inline-flex h-8 w-full items-center justify-center rounded-md border border-destructive/50 px-3 text-xs text-destructive hover:bg-destructive/10 sm:w-auto">
-                      Supprimer
-                    </button>
-                  </form>
+                  <ProjectDeleteDialog
+                    projectId={project.id}
+                    projectName={project.name}
+                    deleteAction={deleteProject}
+                  />
                 </div>
               </div>
             </div>
