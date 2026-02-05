@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 import { DEFAULT_PROJECT_ICON } from "@/lib/projects/icons";
 import { PROJECT_ICON_ITEMS } from "@/components/projects/projectIcons";
+import { iconOptionBase } from "@/components/projects/styles";
 
 export default function ProjectIconPicker({
   name,
@@ -48,7 +49,7 @@ export default function ProjectIconPicker({
             />
             <span
               title={label}
-              className="flex h-10 w-10 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition hover:bg-muted peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary"
+              className={`${iconOptionBase} h-10 w-10`}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
             </span>
@@ -75,7 +76,7 @@ export default function ProjectIconPicker({
                 />
                 <span
                   title={label}
-                  className="flex h-10 w-10 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition hover:bg-muted peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary"
+                  className={`${iconOptionBase} h-10 w-10`}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>

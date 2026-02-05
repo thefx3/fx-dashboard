@@ -7,9 +7,10 @@ import { TaskStatus } from "./utils";
 type TaskDoneCheckboxProps = {
   taskId: string;
   status: TaskStatus;
+  projectId?: string | null;
 };
 
-export function TaskDoneCheckbox({ taskId, status }: TaskDoneCheckboxProps) {
+export function TaskDoneCheckbox({ taskId, status, projectId }: TaskDoneCheckboxProps) {
   const [isPending, startTransition] = useTransition();
   const [checked, setChecked] = useState(status === "done");
 
@@ -29,7 +30,7 @@ export function TaskDoneCheckbox({ taskId, status }: TaskDoneCheckboxProps) {
         const nextStatus: TaskStatus = isChecked ? "done" : "todo";
         setChecked(isChecked);
         startTransition(async () => {
-          await setTaskStatus(taskId, nextStatus);
+          await setTaskStatus(taskId, nextStatus, projectId ?? undefined);
         });
       }}
       className="h-4 w-4 rounded border border-input bg-background"

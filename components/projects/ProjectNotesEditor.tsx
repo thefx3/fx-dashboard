@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { textMuted, textareaBase } from "@/components/projects/styles";
 
 export default function ProjectNotesEditor({
   projectId,
@@ -63,9 +64,9 @@ export default function ProjectNotesEditor({
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Ecris tes notes ici..."
-        className="min-h-[280px] w-full rounded-md border border-input bg-background p-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/90"
+        className={`${textareaBase} min-h-[280px] w-full`}
       />
-      <div className="text-xs text-muted-foreground">{helper}</div>
+      <div className={textMuted}>{helper}</div>
     </div>
   );
 }

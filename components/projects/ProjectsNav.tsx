@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { PenIcon } from "lucide-react";
 import { DEFAULT_PROJECT_ICON, normalizeProjectIcon } from "@/lib/projects/icons";
 import { PROJECT_ICON_COMPONENTS } from "@/components/projects/projectIcons";
+import { textMuted } from "@/components/projects/styles";
 
 type ProjectRow = {
   id: string;
@@ -30,9 +31,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
 
       <nav className="flex flex-wrap gap-2 text-sm px-2 lg:px-0 lg:flex-col">
         {projects.length === 0 ? (
-          <div className="rounded-md px-3 py-2 text-xs text-muted-foreground">
-            Aucun projet
-          </div>
+          <div className={`rounded-md px-3 py-2 ${textMuted}`}>Aucun projet</div>
         ) : (
           projects.map((p) => {
             const slugOrId = p.slug ?? p.id;

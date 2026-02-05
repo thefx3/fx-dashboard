@@ -230,8 +230,8 @@ function TaskCard({
   showStatus?: boolean;
   onClick?: () => void;
 }) {
-  const abandonAction = setTaskStatus.bind(null, task.id, "unfinished");
-  const doingAction = setTaskStatus.bind(null, task.id, "doing");
+  const abandonAction = setTaskStatus.bind(null, task.id, "unfinished", task.project_id);
+  const doingAction = setTaskStatus.bind(null, task.id, "doing", task.project_id);
   const deleteAction = deleteTask.bind(null, task.id);
 
   return (
@@ -253,7 +253,11 @@ function TaskCard({
     >
       <div className="flex gap-2 items-center">
         <span onClick={(event) => event.stopPropagation()}>
-          <TaskDoneCheckbox taskId={task.id} status={task.status} />
+          <TaskDoneCheckbox
+            taskId={task.id}
+            status={task.status}
+            projectId={task.project_id}
+          />
         </span>
         <p className="font-medium truncate">{task.title}</p>
         {showStatus && <span className={STATUS_BADGE_CLASS}>{statusLabel(task.status)}</span>}
@@ -528,6 +532,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
   return (
     <Modal title="Modifier" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
+        <input type="hidden" name="project_id" value={task.project_id ?? ""} />
         <div className="grid gap-1">
           <label className="text-sm font-medium">Titre</label>
           <input

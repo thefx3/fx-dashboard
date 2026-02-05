@@ -8,6 +8,7 @@ export type TaskRow = {
   due_date: string | null;
   status: TaskStatus;
   created_at: string;
+  project_id: string | null;
 };
 
 export type ViewMode = "list" | "calendar";

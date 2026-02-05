@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import {
+  buttonBase,
+  buttonDangerSmall,
+  buttonOutline,
+  inputField,
+  textMuted,
+} from "@/components/projects/styles";
 
 type DeleteAction = (formData: FormData) => void | Promise<void>;
 
@@ -20,7 +27,7 @@ function SubmitButton({
       type="submit"
       disabled={isDisabled}
       className={[
-        "inline-flex h-9 items-center justify-center rounded-md px-3 text-sm",
+        buttonBase,
         isDisabled
           ? "cursor-not-allowed border border-border text-muted-foreground"
           : "border border-destructive/50 text-destructive hover:bg-destructive/10",
@@ -71,7 +78,7 @@ export default function ProjectDeleteDialog({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-8 w-full items-center justify-center rounded-md border border-destructive/50 px-3 text-xs text-destructive hover:bg-destructive/10 sm:w-auto"
+        className={buttonDangerSmall}
       >
         Supprimer
       </button>
@@ -90,7 +97,7 @@ export default function ProjectDeleteDialog({
             <div className="text-sm font-semibold">
               Supprimer “{projectName}” ?
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className={`mt-1 ${textMuted}`}>
               Tapez le nom exact du projet pour confirmer la suppression.
             </p>
 
@@ -111,7 +118,7 @@ export default function ProjectDeleteDialog({
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 placeholder={normalizedName}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                className={inputField}
                 aria-label={`Confirmer la suppression de ${projectName}`}
               />
               {showError && (
@@ -123,7 +130,7 @@ export default function ProjectDeleteDialog({
                 <button
                   type="button"
                   onClick={close}
-                  className="inline-flex h-9 items-center justify-center rounded-md border border-border px-3 text-sm hover:bg-muted"
+                  className={buttonOutline}
                 >
                   Annuler
                 </button>

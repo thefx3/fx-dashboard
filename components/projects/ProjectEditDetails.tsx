@@ -3,6 +3,12 @@
 import { useEffect, useRef } from "react";
 import { DEFAULT_PROJECT_ICON } from "@/lib/projects/icons";
 import { PROJECT_ICON_ITEMS } from "@/components/projects/projectIcons";
+import {
+  buttonBase,
+  buttonOutline,
+  iconOptionBase,
+  inputField,
+} from "@/components/projects/styles";
 
 type UpdateAction = (formData: FormData) => void | Promise<void>;
 
@@ -54,7 +60,7 @@ export default function ProjectEditDetails({
           <input
             name="name"
             defaultValue={defaultName}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className={inputField}
           />
           <div className="grid grid-cols-5 gap-2">
             {PROJECT_ICON_ITEMS.map(({ value, label, Icon }) => (
@@ -69,7 +75,7 @@ export default function ProjectEditDetails({
                 />
                 <span
                   title={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition hover:bg-muted peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary"
+                  className={`${iconOptionBase} h-9 w-9`}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
@@ -79,14 +85,14 @@ export default function ProjectEditDetails({
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-3 text-sm text-primary-foreground"
+              className={`${buttonBase} flex-1 bg-primary text-primary-foreground`}
             >
               Enregistrer
             </button>
             <button
               type="submit"
               formAction={updateSlugAction}
-              className="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-border px-3 text-sm hover:bg-muted"
+              className={`${buttonOutline} flex-1`}
             >
               Mettre à jour
             </button>

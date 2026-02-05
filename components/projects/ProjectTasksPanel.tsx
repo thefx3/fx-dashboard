@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { inputFieldFocus, textMuted } from "@/components/projects/styles";
 
 type TaskRow = {
   id: string;
@@ -75,7 +76,7 @@ export default function ProjectTasksPanel({
       </div>
 
       {tasksColumnMissing ? (
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className={`mt-3 ${textMuted}`}>
           Ajoute la colonne <code>project_id</code> dans <code>tasks</code> pour activer les
           taches par projet.
         </p>
@@ -88,7 +89,7 @@ export default function ProjectTasksPanel({
               name="title"
               required
               placeholder="Nouvelle tache"
-              className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+              className={`${inputFieldFocus} flex-1`}
             />
             <button className="h-9 rounded-md bg-primary px-4 text-sm text-primary-foreground">
               Ajouter
@@ -97,9 +98,7 @@ export default function ProjectTasksPanel({
 
           <div className="mt-4 space-y-2">
             {filteredTasks.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Aucune tache pour ce filtre.
-              </p>
+              <p className={textMuted}>Aucune tache pour ce filtre.</p>
             ) : (
               filteredTasks.map((task) => {
                 const isDone = task.status === "done";
@@ -118,7 +117,7 @@ export default function ProjectTasksPanel({
                       />
                       <button
                         className="h-5 w-5 rounded border border-border"
-                        aria-label={isDone ? "Marquer comme a faire" : "Marquer comme termine"}
+                        aria-label={isDone ? "Marquer comme à faire" : "Marquer comme terminé"}
                       />
                     </form>
                     <span
@@ -131,7 +130,7 @@ export default function ProjectTasksPanel({
                     <form action={deleteAction} className="ml-auto">
                       <input type="hidden" name="task_id" value={task.id} />
                       <input type="hidden" name="project_slug" value={projectSlug} />
-                      <button className="text-xs text-muted-foreground hover:text-foreground">
+                      <button className={`${textMuted} hover:text-foreground`}>
                         Supprimer
                       </button>
                     </form>

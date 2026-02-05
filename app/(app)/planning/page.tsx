@@ -12,7 +12,7 @@ export default async function TasksPage() {
 
   const { data: tasks, error } = await supabase
     .from("tasks")
-    .select("id,title,content,category,due_date,status,created_at")
+    .select("id,title,content,category,due_date,status,created_at,project_id")
     .order("created_at", { ascending: false })
     .returns<TaskRow[]>();
 
