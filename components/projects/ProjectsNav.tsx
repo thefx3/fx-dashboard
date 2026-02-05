@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus } from "lucide-react";
+import { PenIcon } from "lucide-react";
+import { DEFAULT_PROJECT_ICON, normalizeProjectIcon } from "@/lib/projects/icons";
+import { PROJECT_ICON_COMPONENTS } from "@/components/projects/projectIcons";
 
 type ProjectRow = {
   id: string;
   slug: string | null;
   name: string | null;
   title: string | null;
+  icon: string | null;
 };
 
 function getProjectLabel(p: ProjectRow) {
@@ -17,7 +20,6 @@ function getProjectLabel(p: ProjectRow) {
 
 export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
   const pathname = usePathname();
-
   return (
     <aside className="w-48 shrink-0 border-r border-border flex flex-col self-stretch">
       <header className="h-10 flex items-center mb-6">
@@ -39,6 +41,8 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
             const isActive = pathname
               ? pathname === basePath || pathname.startsWith(`${basePath}/`)
               : false;
+            const iconKey = normalizeProjectIcon(p.icon) ?? DEFAULT_PROJECT_ICON;
+            const Icon = PROJECT_ICON_COMPONENTS[iconKey];
 
             return (
               <Link
@@ -52,6 +56,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
                     : "hover:bg-primary/20",
                 ].join(" ")}
               >
+                <Icon className="h-4 w-4" aria-hidden="true" />
                 {getProjectLabel(p)}
               </Link>
             );
@@ -63,8 +68,8 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
         href="/projects"
         className="mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-primary/20 text-sm font-semibold"
       >
-        <Plus className="h-4 w-4" aria-hidden="true" />
-        Ajouter un projet
+        <PenIcon className="h-4 w-4" aria-hidden="true" />
+        Gérer les projets
       </Link>
     </aside>
   );

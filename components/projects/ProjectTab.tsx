@@ -8,6 +8,7 @@ const TABS = [
   { label: "Leçons", segment: "learning" },
   { label: "Ressources", segment: "resources" },
   { label: "Stats", segment: "stats" },
+  { label: "Notes", segment: "notes" },
 ];
 
 export default function ProjectTab({ slug }: { slug?: string }) {

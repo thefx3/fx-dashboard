@@ -6,6 +6,7 @@ type ProjectRow = {
   slug: string | null;
   name: string | null;
   title: string | null;
+  icon: string | null;
 };
 
 export default async function ProjectsNavServer() {
@@ -13,7 +14,7 @@ export default async function ProjectsNavServer() {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("id,slug,name,title")
+    .select("id,slug,name,title,icon")
     .order("created_at", { ascending: false })
     .returns<ProjectRow[]>();
 

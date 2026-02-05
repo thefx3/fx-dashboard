@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ProjectEditDetails from "@/components/projects/ProjectEditDetails";
-import { createProject, deleteProject, updateProject } from "./actions";
+import ProjectIconPicker from "@/components/projects/ProjectIconPicker";
+import { DEFAULT_PROJECT_ICON } from "@/lib/projects/icons";
+import { createProject, deleteProject, updateProject, updateProjectWithSlug } from "./actions";
 
 type ProjectRow = {
   id: string;
   slug: string;
   name: string;
   created_at: string;
+  icon: string | null;
 };
 
 export default async function ProjectsIndexPage() {
@@ -15,7 +18,7 @@ export default async function ProjectsIndexPage() {
 
   const { data: projects, error } = await supabase
     .from("projects")
-    .select("id,slug,name,created_at")
+    .select("id,slug,name,created_at,icon")
     .order("created_at", { ascending: false })
     .returns<ProjectRow[]>();
 
@@ -57,7 +60,10 @@ export default async function ProjectsIndexPage() {
                   <ProjectEditDetails
                     projectId={project.id}
                     defaultName={project.name}
+                    defaultSlug={project.slug}
+                    defaultIcon={project.icon ?? DEFAULT_PROJECT_ICON}
                     updateAction={updateProject}
+                    updateSlugAction={updateProjectWithSlug}
                   />
 
                   <form action={deleteProject}>
@@ -81,6 +87,7 @@ export default async function ProjectsIndexPage() {
               placeholder="Nom du projet"
               className="h-10 rounded-md border border-input bg-background px-3"
             />
+            <ProjectIconPicker name="icon" defaultValue={DEFAULT_PROJECT_ICON} />
             <button className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-primary-foreground">
               Créer
             </button>
