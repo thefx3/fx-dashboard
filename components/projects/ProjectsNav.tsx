@@ -21,14 +21,14 @@ function getProjectLabel(p: ProjectRow) {
 export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
   const pathname = usePathname();
   return (
-    <aside className="w-48 shrink-0 border-r border-border flex flex-col self-stretch">
-      <header className="h-10 flex items-center mb-6">
+    <aside className="w-full lg:w-48 shrink-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col self-stretch">
+      <header className="h-10 flex items-center mb-4 lg:mb-6 px-2 lg:px-0">
         <h2 className="text-xl uppercase tracking-widest font-semibold leading-none">
           Projets
         </h2>
       </header>
 
-      <nav className="flex flex-col gap-2 text-sm">
+      <nav className="flex flex-wrap gap-2 text-sm px-2 lg:px-0 lg:flex-col">
         {projects.length === 0 ? (
           <div className="rounded-md px-3 py-2 text-xs text-muted-foreground">
             Aucun projet
@@ -50,7 +50,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
                 href={href}
                 aria-current={isActive ? "page" : undefined}
                 className={[
-                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left uppercase tracking-wide font-medium",
+                  "flex items-center gap-2 rounded-md px-3 py-2 text-left uppercase tracking-wide font-medium break-words flex-1 lg:flex-none",
                   isActive
                     ? "bg-foreground text-accent shadow-md"
                     : "hover:bg-primary/20",
@@ -66,7 +66,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
 
       <Link
         href="/projects"
-        className="mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-primary/20 text-sm font-semibold"
+        className="mt-3 lg:mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-primary/20 text-sm font-semibold"
       >
         <PenIcon className="h-4 w-4" aria-hidden="true" />
         Gérer les projets

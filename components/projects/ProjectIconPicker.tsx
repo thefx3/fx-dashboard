@@ -35,7 +35,7 @@ export default function ProjectIconPicker({
 
   return (
     <div className="flex items-start gap-2">
-      <div className="flex flex-nowrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {primaryIcons.map(({ value, label, Icon }) => (
           <label key={value} className="cursor-pointer">
             <input

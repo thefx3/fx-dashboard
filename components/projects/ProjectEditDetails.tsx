@@ -39,8 +39,8 @@ export default function ProjectEditDetails({
   }, []);
 
   return (
-    <details ref={detailsRef} className="relative">
-      <summary className="list-none inline-flex h-8 cursor-pointer items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted">
+    <details ref={detailsRef} className="relative w-full sm:w-auto">
+      <summary className="list-none flex h-8 w-full cursor-pointer items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted sm:w-auto">
         Modifier
       </summary>
       <div className="absolute right-0 z-10 mt-2 w-64 rounded-md border border-border bg-background p-3 shadow-lg">

@@ -17,23 +17,35 @@ export default function ProjectNotesEditor({
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [isPending, startTransition] = useTransition();
   const lastSavedRef = useRef(initialContent);
+  const valueRef = useRef(initialContent);
+  const hasLocalEdits = useRef(false);
 
   useEffect(() => {
+    if (hasLocalEdits.current) return;
     setValue(initialContent);
     lastSavedRef.current = initialContent;
   }, [initialContent]);
 
   useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
     if (value === lastSavedRef.current) return;
+    hasLocalEdits.current = true;
 
     setStatus("saving");
+    const snapshot = value;
     const timer = setTimeout(() => {
       startTransition(async () => {
-        await saveAction(projectId, value, projectSlug);
-        lastSavedRef.current = value;
-        setStatus("saved");
+        await saveAction(projectId, snapshot, projectSlug);
+        lastSavedRef.current = snapshot;
+        if (valueRef.current === snapshot) {
+          setStatus("saved");
+          hasLocalEdits.current = false;
+        }
       });
-    }, 600);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [value, projectId, projectSlug, startTransition]);

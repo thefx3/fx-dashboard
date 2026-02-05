@@ -27,7 +27,7 @@ export default async function ProjectsIndexPage() {
   const safeProjects = projects ?? [];
 
   return (
-    <div className="w-full p-2">
+    <div className="w-full p-2 sm:p-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {safeProjects.map((project) => {
           const projectHref = `/projects/${project.slug}/posts`;
@@ -36,7 +36,7 @@ export default async function ProjectsIndexPage() {
               key={project.id}
               className="rounded-xl border border-border bg-card p-4"
             >
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <Link
                     href={projectHref}
@@ -49,10 +49,10 @@ export default async function ProjectsIndexPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                   <Link
                     href={projectHref}
-                    className="inline-flex h-8 items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted"
+                    className="inline-flex h-8 w-full items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted sm:w-auto"
                   >
                     Ouvrir
                   </Link>
@@ -66,9 +66,9 @@ export default async function ProjectsIndexPage() {
                     updateSlugAction={updateProjectWithSlug}
                   />
 
-                  <form action={deleteProject}>
+                  <form action={deleteProject} className="w-full sm:w-auto">
                     <input type="hidden" name="id" value={project.id} />
-                    <button className="inline-flex h-8 items-center justify-center rounded-md border border-destructive/50 px-3 text-xs text-destructive hover:bg-destructive/10">
+                    <button className="inline-flex h-8 w-full items-center justify-center rounded-md border border-destructive/50 px-3 text-xs text-destructive hover:bg-destructive/10 sm:w-auto">
                       Supprimer
                     </button>
                   </form>

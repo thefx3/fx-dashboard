@@ -25,7 +25,7 @@ export default function ProjectTab({ slug }: { slug?: string }) {
   }, [resolvedSlug, router]);
 
   return (
-    <div className="h-12 w-full grid grid-cols-6 shrink-0 border-b border-border">
+    <div className="min-h-12 w-full shrink-0 border-b border-border grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
       {TABS.map((tab) => {
         const href = `/projects/${resolvedSlug}/${tab.segment}`;
         const isActive = pathname === href;
@@ -36,7 +36,7 @@ export default function ProjectTab({ slug }: { slug?: string }) {
             prefetch
             aria-current={isActive ? "page" : undefined}
             className={[
-              "flex items-center justify-center text-md transition",
+              "flex items-center justify-center text-md transition px-2",
               isActive ? "bg-accent/10 font-semibold border-b-4 border-accent" : "hover:bg-primary/10",
             ].join(" ")}
           >

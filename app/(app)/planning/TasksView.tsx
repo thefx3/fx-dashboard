@@ -26,7 +26,8 @@ const INPUT_SMALL_CLASS_PAD =
   "text-sm h-8 rounded-md border border-input bg-background px-3 focus:outline-none focus:ring-1 focus:ring-primary/90 focus:ring-offset-0";
 const PRIMARY_BUTTON_CLASS =
   "text-sm cursor-pointer h-8 rounded-md bg-primary px-3 text-primary-foreground";
-const FILTER_BUTTON_BASE = "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left";
+const FILTER_BUTTON_BASE =
+  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left";
 const FILTER_BUTTON_ACTIVE = "bg-foreground text-accent shadow-md";
 const FILTER_BUTTON_INACTIVE = "hover:bg-primary/20";
 const FILTER_COUNT_BADGE_CLASS =
@@ -109,7 +110,7 @@ export function TasksView({ tasks }: { tasks: TaskRow[] }) {
 
       <div className="flex flex-1 w-full">
         {viewMode === "list" ? (
-          <div className="flex w-full gap-6">
+          <div className="flex w-full gap-6 flex-col lg:flex-row">
             <TaskFilterNav activeFilter={filter} onChange={setFilter} counts={filterCounts} />
           
             <div className="space-y-4 w-full">
@@ -139,7 +140,7 @@ function AddTaskForm() {
       <div className="flex w-full gap-2 justify-center items-center">
         <input name="title" required className={INPUT_CLASS} placeholder="Nouvelle tâche…" />
       </div>
-      <div className="flex w-full gap-2 justify-start items-center">
+      <div className="flex w-full gap-2 justify-start items-center flex-wrap sm:flex-nowrap">
         <div className="flex gap-2 justify-center items-center">
           <input name="due_date" type="date" className={INPUT_SMALL_CLASS} />
         </div>
@@ -163,7 +164,7 @@ function TaskFilterNav({ activeFilter, onChange, counts,
 }: { activeFilter: TaskFilter; onChange: (filter: TaskFilter) => void; counts: Record<TaskFilter, number>;
 }) {
   return (
-    <aside className="w-48 shrink-0 border-r border-border">
+    <aside className="w-full shrink-0 border-b border-border pb-2 lg:w-48 lg:border-b-0 lg:border-r lg:pb-0">
       <nav className="flex flex-col gap-2 text-sm">
         {FILTER_ORDER.map((filterKey) => {
           const Icon = FILTER_ICONS[filterKey];
