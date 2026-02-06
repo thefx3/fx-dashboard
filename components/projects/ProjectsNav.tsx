@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PenIcon } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, ChevronRight, PenIcon } from "lucide-react";
 import { DEFAULT_PROJECT_ICON, normalizeProjectIcon } from "@/lib/projects/icons";
 import { PROJECT_ICON_COMPONENTS } from "@/components/projects/projectIcons";
 import { textMuted } from "@/components/projects/styles";
@@ -21,15 +22,52 @@ function getProjectLabel(p: ProjectRow) {
 
 export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const contentId = "projects-nav-content";
   return (
-    <aside className="w-full lg:w-48 shrink-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col self-stretch">
-      <header className="h-10 flex items-center mb-4 lg:mb-6 px-2 lg:px-0">
-        <h2 className="text-xl uppercase tracking-widest font-semibold leading-none">
-          Projets
-        </h2>
+    <aside
+      className={[
+        "w-full shrink-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col self-stretch overflow-hidden transition-[width] duration-200 ease-in-out",
+        isCollapsed ? "lg:w-12" : "lg:w-48",
+      ].join(" ")}
+    >
+      <header
+        className={[
+          "h-10 flex items-center mb-4 lg:mb-6 px-2 lg:px-0",
+          isCollapsed ? "justify-end" : "justify-between",
+        ].join(" ")}
+      >
+        {!isCollapsed ? (
+          <h2 className="text-xl uppercase tracking-widest font-semibold leading-none">
+            Projets
+          </h2>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((prev) => !prev)}
+          aria-controls={contentId}
+          aria-expanded={!isCollapsed}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-primary/20"
+          aria-label={isCollapsed ? "Display projects" : "Hide projects"}
+        >
+          <ChevronLeft
+            className={[
+              "h-4 w-4 transition-transform",
+              isCollapsed ? "-rotate-180" : "rotate-0",
+            ].join(" ")}
+            aria-hidden="true"
+          />
+        </button>
       </header>
 
-      <nav className="flex flex-wrap gap-2 text-sm px-2 lg:px-0 lg:flex-col">
+      <nav
+        id={contentId}
+        aria-hidden={isCollapsed}
+        className={[
+          "flex flex-wrap gap-2 text-sm px-2 lg:px-0 lg:flex-col",
+          isCollapsed ? "hidden" : "",
+        ].join(" ")}
+      >
         {projects.length === 0 ? (
           <div className={`rounded-md px-3 py-2 ${textMuted}`}>Aucun projet</div>
         ) : (
@@ -65,7 +103,10 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
 
       <Link
         href="/projects"
-        className="mt-3 lg:mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-primary/20 text-sm font-semibold"
+        className={[
+          "mt-3 lg:mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-primary/20 text-sm font-semibold",
+          isCollapsed ? "hidden" : "",
+        ].join(" ")}
       >
         <PenIcon className="h-4 w-4" aria-hidden="true" />
         Manage projects

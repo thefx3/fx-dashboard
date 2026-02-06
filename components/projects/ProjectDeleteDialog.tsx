@@ -80,7 +80,7 @@ export default function ProjectDeleteDialog({
         onClick={() => setOpen(true)}
         className={buttonDangerSmall}
       >
-        Supprimer
+        Delete
       </button>
 
       {open && (

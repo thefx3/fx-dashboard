@@ -46,7 +46,7 @@ export default async function ProjectsIndexPage() {
                     {project.name}
                   </Link>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Créé le {new Date(project.created_at).toLocaleDateString("fr-FR")}
+                    Created on {new Date(project.created_at).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
 
@@ -55,7 +55,7 @@ export default async function ProjectsIndexPage() {
                     href={projectHref}
                     className="inline-flex h-8 w-full items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted sm:w-auto"
                   >
-                    Ouvrir
+                    Open
                   </Link>
 
                   <ProjectEditDetails
@@ -79,7 +79,7 @@ export default async function ProjectsIndexPage() {
         })}
 
         <div className="rounded-xl border border-dashed border-border bg-card p-4">
-          <div className="text-sm font-medium">Ajouter un projet</div>
+          <div className="text-sm font-medium">Add a new project</div>
           <form action={createProject} className="mt-3 flex flex-col gap-3">
             <input
               name="name"
@@ -89,7 +89,7 @@ export default async function ProjectsIndexPage() {
             />
             <ProjectIconPicker name="icon" defaultValue={DEFAULT_PROJECT_ICON} />
             <button className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-primary-foreground">
-              Créer
+              Create
             </button>
           </form>
         </div>

@@ -3,22 +3,52 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import icon from "@/app/icon.png";
 import { APP_NAV, APPS, type AppKey } from "@/lib/app";
+import { DEFAULT_PROJECT_ICON, normalizeProjectIcon } from "@/lib/projects/icons";
+import { PROJECT_ICON_COMPONENTS } from "@/components/projects/projectIcons";
+import { textMuted } from "@/components/projects/styles";
+
+type ProjectRow = {
+  id: string;
+  slug: string | null;
+  name: string | null;
+  title: string | null;
+  icon: string | null;
+};
 
 type NavBarProps = {
   appKey?: AppKey;
+  projects?: ProjectRow[];
 };
 
-export default function NavBar({ appKey = "main" }: NavBarProps) {
-  const pathname = usePathname();
-const navLinkClass =
+const NAV_LINK_BASE =
   "group inline-flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold tracking-wide transition hover:bg-primary/20 hover:text-foreground";
+const NAV_LINK_ACTIVE =
+  "shadow-sm ring-1 ring-primary/30 hover:bg-accent/90 bg-foreground text-accent";
+const NAV_LINK_INACTIVE = "text-muted-foreground";
+const NAV_ICON_ACTIVE = "text-accent";
+const NAV_ICON_INACTIVE = "group-hover:text-primary";
 
-const navLinkActiveClass =
-  " shadow-sm ring-1 ring-primary/30 hover:bg-accent/90 bg-foreground text-accent";
+const PROJECTS_EMPTY_CLASS = `pl-11 ${textMuted}`;
+const PROJECTS_SUBNAV_CLASS = "flex flex-col gap-1 pl-6";
+const PROJECTS_ITEM_BASE =
+  "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] font-semibold uppercase tracking-widest";
+const PROJECTS_ITEM_ACTIVE = "bg-primary/20 text-foreground";
+const PROJECTS_ITEM_INACTIVE =
+  "text-muted-foreground hover:bg-primary/10 hover:text-foreground";
+
+export default function NavBar({ appKey = "main", projects = [] }: NavBarProps) {
+  const pathname = usePathname();
+  const [isProjectsOpen, setIsProjectsOpen] = useState(
+    pathname ? pathname.startsWith("/projects") : false,
+  );
+  const projectsSubnavId = "projects-subnav";
 
   const links = APP_NAV[appKey] ?? [];
+  const otherLinks = links.map((item) => item.href).filter((href) => href !== "/");
   const app = APPS.find((item) => item.key === appKey);
   const activeRingClass = app?.colorClass
     ? app.colorClass.replace(/^text-/, "ring-")
@@ -43,37 +73,167 @@ const navLinkActiveClass =
 
       <nav className="flex flex-1 flex-col gap-3 px-4 pb-6">
         {links.map((link) => {
-          const isInbox = link.href === "/";
-          const otherLinks = links
-            .map((item) => item.href)
-            .filter((href) => href !== "/");
-          const isActive = isInbox
-            ? pathname === "/" ||
-              !otherLinks.some(
-                (href) =>
-                  pathname === href || pathname.startsWith(`${href}/`),
-              )
-            : pathname === link.href || pathname.startsWith(`${link.href}/`);
+          const isActive = getNavLinkActive(pathname, link.href, otherLinks);
           const Icon = link.Icon;
+          const isProjectsLink = link.href === "/projects";
 
           return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`${navLinkClass} ${isActive ? navLinkActiveClass : "text-muted-foreground"}`}
-              aria-current={isActive ? "page" : undefined}
-            >
-              <Icon
-                className={`h-4 w-4 ${
-                  isActive ? "text-accent" : "group-hover:text-primary"
-                }`}
-                aria-hidden
-              />
-              {link.label}
-            </Link>
+            <div key={link.href} className="flex flex-col gap-2">
+              {isProjectsLink ? (
+                <NavItem
+                  href={link.href}
+                  label={link.label}
+                  Icon={Icon}
+                  isActive={isActive}
+                  onClick={() => setIsProjectsOpen((prev) => !prev)}
+                  aria-controls={projectsSubnavId}
+                  aria-expanded={isProjectsOpen}
+                  rightSlot={
+                    <ChevronDown
+                      className={[
+                        "h-4 w-4 transition-transform",
+                        isProjectsOpen ? "rotate-0" : "-rotate-90",
+                      ].join(" ")}
+                      aria-hidden="true"
+                    />
+                  }
+                />
+              ) : (
+                <NavItem
+                  href={link.href}
+                  label={link.label}
+                  Icon={Icon}
+                  isActive={isActive}
+                />
+              )}
+              {isProjectsLink ? (
+                isProjectsOpen ? (
+                  <ProjectsSubNav
+                    id={projectsSubnavId}
+                    pathname={pathname}
+                    projects={projects}
+                  />
+                ) : null
+              ) : null}
+            </div>
           );
         })}
       </nav>
     </aside>
+  );
+}
+
+function getNavLinkActive(
+  pathname: string | null,
+  href: string,
+  otherLinks: string[],
+) {
+  if (!pathname) return false;
+  if (href === "/") {
+    return (
+      pathname === "/" ||
+      !otherLinks.some(
+        (otherHref) =>
+          pathname === otherHref || pathname.startsWith(`${otherHref}/`),
+      )
+    );
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavItem({
+  href,
+  label,
+  Icon,
+  isActive,
+  onClick,
+  rightSlot,
+  "aria-controls": ariaControls,
+  "aria-expanded": ariaExpanded,
+}: {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+  isActive: boolean;
+  onClick?: () => void;
+  rightSlot?: ReactNode;
+  "aria-controls"?: string;
+  "aria-expanded"?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      aria-controls={ariaControls}
+      aria-expanded={ariaExpanded}
+      className={[
+        NAV_LINK_BASE,
+        rightSlot ? "justify-between" : "",
+        isActive ? NAV_LINK_ACTIVE : NAV_LINK_INACTIVE,
+      ].join(" ")}
+      aria-current={isActive ? "page" : undefined}
+    >
+      <span className="inline-flex items-center gap-3">
+        <Icon
+          className={`h-4 w-4 ${isActive ? NAV_ICON_ACTIVE : NAV_ICON_INACTIVE}`}
+          aria-hidden
+        />
+        {label}
+      </span>
+      {rightSlot}
+    </Link>
+  );
+}
+
+function getProjectLabel(p: ProjectRow) {
+  return p.name ?? p.title ?? p.slug ?? p.id;
+}
+
+function ProjectsSubNav({
+  id,
+  pathname,
+  projects,
+}: {
+  id: string;
+  pathname: string | null;
+  projects: ProjectRow[];
+}) {
+  if (projects.length === 0) {
+    return (
+      <div id={id} className={PROJECTS_EMPTY_CLASS}>
+        Aucun projet
+      </div>
+    );
+  }
+
+  return (
+    <div id={id} className={PROJECTS_SUBNAV_CLASS}>
+      {projects.map((project) => {
+        const slugOrId = project.slug ?? project.id;
+        const basePath = `/projects/${slugOrId}`;
+        const href = `${basePath}/posts`;
+        const isActive = pathname
+          ? pathname === basePath || pathname.startsWith(`${basePath}/`)
+          : false;
+        const iconKey =
+          normalizeProjectIcon(project.icon) ?? DEFAULT_PROJECT_ICON;
+        const Icon = PROJECT_ICON_COMPONENTS[iconKey];
+
+        return (
+          <Link
+            key={project.id}
+            href={href}
+            aria-current={isActive ? "page" : undefined}
+            className={[
+              PROJECTS_ITEM_BASE,
+              isActive ? PROJECTS_ITEM_ACTIVE : PROJECTS_ITEM_INACTIVE,
+            ].join(" ")}
+          >
+            <Icon className="h-3 w-3" aria-hidden="true" />
+            {getProjectLabel(project)}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
