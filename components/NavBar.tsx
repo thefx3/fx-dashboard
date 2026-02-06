@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import icon from "@/app/icon.png";
 import { APP_NAV, APPS, type AppKey } from "@/lib/app";
@@ -36,9 +36,11 @@ const PROJECTS_EMPTY_CLASS = `pl-11 ${textMuted}`;
 const PROJECTS_SUBNAV_CLASS = "flex flex-col gap-1 pl-6";
 const PROJECTS_ITEM_BASE =
   "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] font-semibold uppercase tracking-widest";
-const PROJECTS_ITEM_ACTIVE = "bg-primary/20 text-foreground";
+const PROJECTS_ITEM_ACTIVE = "text-accent bg-primary/20 shadow-sm";
 const PROJECTS_ITEM_INACTIVE =
   "text-muted-foreground hover:bg-primary/10 hover:text-foreground";
+const PROJECTS_TOGGLE_BASE =
+  "absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md transition cursor-pointer";
 
 export default function NavBar({ appKey = "main", projects = [] }: NavBarProps) {
   const pathname = usePathname();
@@ -80,15 +82,27 @@ export default function NavBar({ appKey = "main", projects = [] }: NavBarProps) 
           return (
             <div key={link.href} className="flex flex-col gap-2">
               {isProjectsLink ? (
-                <NavItem
-                  href={link.href}
-                  label={link.label}
-                  Icon={Icon}
-                  isActive={isActive}
-                  onClick={() => setIsProjectsOpen((prev) => !prev)}
-                  aria-controls={projectsSubnavId}
-                  aria-expanded={isProjectsOpen}
-                  rightSlot={
+                <div className="relative">
+                  <NavItem
+                    href={link.href}
+                    label={link.label}
+                    Icon={Icon}
+                    isActive={isActive}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsProjectsOpen((prev) => !prev)}
+                    aria-controls={projectsSubnavId}
+                    aria-expanded={isProjectsOpen}
+                    aria-label={
+                      isProjectsOpen ? "Replier les projets" : "Déplier les projets"
+                    }
+                    className={[
+                      PROJECTS_TOGGLE_BASE,
+                      isActive ? NAV_ICON_ACTIVE : NAV_LINK_INACTIVE,
+                    ].join(" ")}
+                  >
                     <ChevronDown
                       className={[
                         "h-4 w-4 transition-transform",
@@ -96,8 +110,8 @@ export default function NavBar({ appKey = "main", projects = [] }: NavBarProps) 
                       ].join(" ")}
                       aria-hidden="true"
                     />
-                  }
-                />
+                  </button>
+                </div>
               ) : (
                 <NavItem
                   href={link.href}
@@ -146,29 +160,20 @@ function NavItem({
   label,
   Icon,
   isActive,
-  onClick,
-  rightSlot,
-  "aria-controls": ariaControls,
-  "aria-expanded": ariaExpanded,
+  className,
 }: {
   href: string;
   label: string;
   Icon: LucideIcon;
   isActive: boolean;
-  onClick?: () => void;
-  rightSlot?: ReactNode;
-  "aria-controls"?: string;
-  "aria-expanded"?: boolean;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      onClick={onClick}
-      aria-controls={ariaControls}
-      aria-expanded={ariaExpanded}
       className={[
         NAV_LINK_BASE,
-        rightSlot ? "justify-between" : "",
+        className ?? "",
         isActive ? NAV_LINK_ACTIVE : NAV_LINK_INACTIVE,
       ].join(" ")}
       aria-current={isActive ? "page" : undefined}
@@ -180,7 +185,6 @@ function NavItem({
         />
         {label}
       </span>
-      {rightSlot}
     </Link>
   );
 }
