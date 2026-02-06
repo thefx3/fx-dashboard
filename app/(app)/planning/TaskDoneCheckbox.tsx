@@ -21,7 +21,7 @@ export function TaskDoneCheckbox({ taskId, status, projectId }: TaskDoneCheckbox
   return (
     <input
       type="checkbox"
-      aria-label="Marquer comme terminé"
+      aria-label={checked ? "Mark as todo" : "Mark as done"}
       checked={checked}
       disabled={isPending}
       onClick={(event) => event.stopPropagation()}

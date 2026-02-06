@@ -95,10 +95,10 @@ export default function ProjectDeleteDialog({
             onPointerDown={(event) => event.stopPropagation()}
           >
             <div className="text-sm font-semibold">
-              Supprimer “{projectName}” ?
+              Delete “{projectName}” ?
             </div>
             <p className={`mt-1 ${textMuted}`}>
-              Tapez le nom exact du projet pour confirmer la suppression.
+              Type the exact project name to confirm deletion.
             </p>
 
             <form
@@ -123,7 +123,7 @@ export default function ProjectDeleteDialog({
               />
               {showError && (
                 <p className="text-xs text-destructive">
-                  Le nom ne correspond pas. Tapez exactement “{normalizedName}”.
+                  The name does not match. Type exactly “{normalizedName}”.
                 </p>
               )}
               <div className="flex items-center justify-end gap-2">
@@ -132,7 +132,7 @@ export default function ProjectDeleteDialog({
                   onClick={close}
                   className={buttonOutline}
                 >
-                  Annuler
+                  Cancel
                 </button>
                 <SubmitButton disabled={!isMatch} label="Supprimer" />
               </div>

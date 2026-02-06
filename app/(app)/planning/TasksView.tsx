@@ -80,7 +80,7 @@ export function TasksView({ tasks }: { tasks: TaskRow[] }) {
   return (
     <div className="space-y-6 w-full flex flex-col">
       <header className="flex items-center gap-4">
-        <h1 className="text-xl uppercase tracking-widest font-semibold leading-none">Mon planning</h1>
+        <h1 className="text-xl uppercase tracking-widest font-semibold leading-none">My planning</h1>
         <div className="inline-flex h-10 items-center rounded-md border border-border bg-card p-1 text-sm gap-1">
           <button
             type="button"
@@ -91,7 +91,7 @@ export function TasksView({ tasks }: { tasks: TaskRow[] }) {
                 : `${VIEW_TOGGLE_BASE_CLASS} ${VIEW_TOGGLE_INACTIVE_CLASS}`
             }
           >
-            Liste
+            List
           </button>
           <button
             type="button"
@@ -102,7 +102,7 @@ export function TasksView({ tasks }: { tasks: TaskRow[] }) {
                 : `${VIEW_TOGGLE_BASE_CLASS} ${VIEW_TOGGLE_INACTIVE_CLASS}`
             }
           >
-            Calendrier
+            Calendar
           </button>
         </div>
       </header>
@@ -154,7 +154,7 @@ function AddTaskForm() {
           />
         </div>
 
-        <button className={PRIMARY_BUTTON_CLASS}>Ajouter</button>
+        <button className={PRIMARY_BUTTON_CLASS}>Add</button>
       </div>
     </form>
   );
@@ -204,7 +204,7 @@ function TaskList({
   onTaskClick?: (task: TaskRow) => void;
 }) {
   if (!tasks.length) {
-    return <p className="text-sm text-muted-foreground">Aucune tâche pour le moment.</p>;
+    return <p className="text-sm text-muted-foreground">No tasks for the moment.</p>;
   }
 
   return (
@@ -266,21 +266,21 @@ function TaskCard({
       <div className="flex justify-end items-center gap-2">
         {task.category && <span className={TAG_CLASS}>{task.category}</span>}
         {task.due_date && (
-          <span className="text-xs text-muted-foreground">Limite: {task.due_date}</span>
+          <span className="text-xs text-muted-foreground">Limit: {task.due_date}</span>
         )}
       </div>
 
       <div className="flex flex-1 gap-2 justify-end items-center" onClick={(event) => event.stopPropagation()}>
         <form action={abandonAction}>
-          <button className={ACTION_BUTTON_CLASS}>Abandonner</button>
+          <button className={ACTION_BUTTON_CLASS}>Abandon</button>
         </form>
 
         <form action={doingAction}>
-          <button className={ACTION_BUTTON_ACCENT_CLASS}>En cours</button>
+          <button className={ACTION_BUTTON_ACCENT_CLASS}>In progress</button>
         </form>
 
         <form action={deleteAction}>
-          <button className={ACTION_BUTTON_DESTRUCTIVE_CLASS}>Supprimer</button>
+          <button className={ACTION_BUTTON_DESTRUCTIVE_CLASS}>Delete</button>
         </form>
       </div>
     </div>
@@ -320,7 +320,7 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
               setCalendarDate(new Date(today.getFullYear(), today.getMonth(), 1));
             }}
             className={CALENDAR_BADGE_CLASS}
-            aria-label="Revenir au mois courant"
+            aria-label="Return to current month"
           >
             <span className="text-[10px] font-semibold uppercase">
               {today.toLocaleDateString("fr-FR", { month: "short" })}
@@ -340,7 +340,7 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
               setCalendarDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
             }}
             className={CALENDAR_NAV_BUTTON_CLASS}
-            aria-label="Mois précédent"
+            aria-label="Previous month"
           >
             {"<"}
           </button>
@@ -352,7 +352,7 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
               setCalendarDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
             }}
             className={CALENDAR_NAV_BUTTON_CLASS}
-            aria-label="Mois suivant"
+            aria-label="Next month"
           >
             {">"}
           </button>
@@ -408,7 +408,7 @@ function CalendarView({ tasks }: { tasks: TaskRow[] }) {
                   </button>
                 ))}
                 {dayTasks.length > 2 && (
-                  <div className="text-xs text-muted-foreground">+{dayTasks.length - 2} autres</div>
+                  <div className="text-xs text-muted-foreground">+{dayTasks.length - 2} others</div>
                 )}
               </div>
             </div>
@@ -491,7 +491,7 @@ function DayTasksList({
   onSelectTask: (task: TaskRow) => void;
 }) {
   if (!tasks.length) {
-    return <p className="text-sm text-muted-foreground">Rien ce jour-là.</p>;
+    return <p className="text-sm text-muted-foreground">Nothing for this day.</p>;
   }
 
   return (
@@ -509,7 +509,7 @@ function DayTasksList({
           </div>
           <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
             {task.category && <span>{task.category}</span>}
-            {task.due_date && <span>Limite: {task.due_date}</span>}
+            {task.due_date && <span>Limit: {task.due_date}</span>}
           </div>
         </button>
       ))}
@@ -534,7 +534,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
       <form onSubmit={handleSubmit} className="space-y-3">
         <input type="hidden" name="project_id" value={task.project_id ?? ""} />
         <div className="grid gap-1">
-          <label className="text-sm font-medium">Titre</label>
+          <label className="text-sm font-medium">Title</label>
           <input
             name="title"
             defaultValue={task.title}
@@ -546,7 +546,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
 
         <div className="grid grid-cols-2 gap-2">
           <div className="grid gap-1">
-            <label className="text-sm font-medium">Statut</label>
+            <label className="text-sm font-medium">Status</label>
             <select
               name="status"
               defaultValue={task.status}
@@ -562,7 +562,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
           </div>
 
           <div className="grid gap-1">
-            <label className="text-sm font-medium">Catégorie</label>
+            <label className="text-sm font-medium">Category</label>
             <input
               name="category"
               defaultValue={task.category ?? ""}
@@ -573,7 +573,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
         </div>
 
         <div className="grid gap-1">
-          <label className="text-sm font-medium">Échéance</label>
+          <label className="text-sm font-medium">Due Date</label>
           <input
             name="due_date"
             type="date"
@@ -584,7 +584,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
         </div>
 
         <div className="grid gap-1">
-          <label className="text-sm font-medium">Contenu</label>
+          <label className="text-sm font-medium">Content</label>
           <textarea
             name="content"
             defaultValue={task.content ?? ""}
@@ -603,7 +603,7 @@ function TaskEditModal({ task, onClose }: { task: TaskRow; onClose: () => void }
             Annuler
           </button>
           <button className={MODAL_PRIMARY_BUTTON_CLASS} disabled={isPending}>
-            {isPending ? "Enregistrement..." : "Enregistrer"}
+            {isPending ? "Saving..." : "Save"}
           </button>
         </div>
       </form>
@@ -638,7 +638,7 @@ function Modal({
             onClick={onClose}
             className="text-sm text-muted-foreground hover:text-foreground"
           >
-            Fermer
+            Close
           </button>
         </div>
         <div className="mt-4 space-y-3">{children}</div>

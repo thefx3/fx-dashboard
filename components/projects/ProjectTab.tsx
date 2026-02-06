@@ -5,11 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const TABS = [
-  { label: "Publications", segment: "posts" },
-  { label: "Leçons", segment: "learning" },
-  { label: "Ressources", segment: "resources" },
+  { label: "Feed", segment: "posts" },
+  { label: "Learning", segment: "learning" },
+  { label: "Resources", segment: "resources" },
   { label: "Stats", segment: "stats" },
   { label: "Notes", segment: "notes" },
+  { label: "Settings", segment: "settings" },
 ];
 
 export default function ProjectTab({ slug }: { slug?: string }) {
@@ -25,7 +26,7 @@ export default function ProjectTab({ slug }: { slug?: string }) {
   }, [resolvedSlug, router]);
 
   return (
-    <div className="min-h-12 w-full shrink-0 border-b border-border grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="min-h-12 w-full shrink-0 border-b border-border grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8">
       {TABS.map((tab) => {
         const href = `/projects/${resolvedSlug}/${tab.segment}`;
         const isActive = pathname === href;

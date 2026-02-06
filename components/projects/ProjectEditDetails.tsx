@@ -87,14 +87,14 @@ export default function ProjectEditDetails({
               type="submit"
               className={`${buttonBase} flex-1 bg-primary text-primary-foreground`}
             >
-              Enregistrer
+              Save
             </button>
             <button
               type="submit"
               formAction={updateSlugAction}
               className={`${buttonOutline} flex-1`}
             >
-              Mettre à jour
+              Update
             </button>
           </div>
         </form>

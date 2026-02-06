@@ -68,7 +68,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
         className="mt-3 lg:mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-primary/20 text-sm font-semibold"
       >
         <PenIcon className="h-4 w-4" aria-hidden="true" />
-        Gérer les projets
+        Manage projects
       </Link>
     </aside>
   );

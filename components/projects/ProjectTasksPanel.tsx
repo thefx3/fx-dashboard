@@ -43,7 +43,7 @@ export default function ProjectTasksPanel({
     <section className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm font-semibold uppercase tracking-widest">
-          Taches a faire
+          Tasks to do
         </div>
         {!tasksColumnMissing && (
           <div className="flex items-center gap-2 text-xs">
@@ -57,7 +57,7 @@ export default function ProjectTasksPanel({
                   : "border-border text-muted-foreground hover:bg-muted",
               ].join(" ")}
             >
-              A faire
+              To do
             </button>
             <button
               type="button"
@@ -69,7 +69,7 @@ export default function ProjectTasksPanel({
                   : "border-border text-muted-foreground hover:bg-muted",
               ].join(" ")}
             >
-              Terminees
+              Finished
             </button>
           </div>
         )}
@@ -77,8 +77,8 @@ export default function ProjectTasksPanel({
 
       {tasksColumnMissing ? (
         <p className={`mt-3 ${textMuted}`}>
-          Ajoute la colonne <code>project_id</code> dans <code>tasks</code> pour activer les
-          taches par projet.
+          Add the <code>project_id</code> column in <code>tasks</code> to enable
+          project-specific tasks.
         </p>
       ) : (
         <>
@@ -92,13 +92,13 @@ export default function ProjectTasksPanel({
               className={`${inputFieldFocus} flex-1`}
             />
             <button className="h-9 rounded-md bg-primary px-4 text-sm text-primary-foreground">
-              Ajouter
+              Add
             </button>
           </form>
 
           <div className="mt-4 space-y-2">
             {filteredTasks.length === 0 ? (
-              <p className={textMuted}>Aucune tache pour ce filtre.</p>
+              <p className={textMuted}>No tasks for this filter.</p>
             ) : (
               filteredTasks.map((task) => {
                 const isDone = task.status === "done";
@@ -117,7 +117,7 @@ export default function ProjectTasksPanel({
                       />
                       <button
                         className="h-5 w-5 rounded border border-border"
-                        aria-label={isDone ? "Marquer comme à faire" : "Marquer comme terminé"}
+                        aria-label={isDone ? "Mark as todo" : "Mark as done"}
                       />
                     </form>
                     <span
@@ -131,7 +131,7 @@ export default function ProjectTasksPanel({
                       <input type="hidden" name="task_id" value={task.id} />
                       <input type="hidden" name="project_slug" value={projectSlug} />
                       <button className={`${textMuted} hover:text-foreground`}>
-                        Supprimer
+                        Delete
                       </button>
                     </form>
                   </div>

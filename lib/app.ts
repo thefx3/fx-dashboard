@@ -23,9 +23,9 @@ export const APP_NAV: Record<AppKey, NavLink[]> = {
     { href: "/", label: "Home", Icon: HomeIcon },
     { href: "/websites", label: "Websites", Icon: Globe2 },
     { href: "/planning", label: "Planning", Icon: ListChecks },
-    { href: "/projects", label: "Projets", Icon: FolderKanban },
+    { href: "/projects", label: "Projects", Icon: FolderKanban },
     { href: "/clients", label: "Clients", Icon: Users },
-    { href: "/settings", label: "Paramètres", Icon: Settings },
+    { href: "/settings", label: "Settings", Icon: Settings },
   ],
 } as const;
 

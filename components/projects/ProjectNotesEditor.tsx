@@ -53,9 +53,9 @@ export default function ProjectNotesEditor({
 
   const helper =
     status === "saving" || isPending
-      ? "Enregistrement..."
+      ? "Saving..."
       : status === "saved"
-      ? "Enregistre"
+      ? "Saved"
       : "Auto-save";
 
   return (
@@ -63,7 +63,7 @@ export default function ProjectNotesEditor({
       <textarea
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="Ecris tes notes ici..."
+        placeholder="Write something here..."
         className={`${textareaBase} min-h-[280px] w-full`}
       />
       <div className={textMuted}>{helper}</div>
