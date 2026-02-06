@@ -63,9 +63,9 @@ export default function MobileNav({ appKey = "main" }: MobileNavProps) {
                 <Image
                   src={icon}
                   alt="Logo"
-                  width={36}
-                  height={36}
-                  className={`h-10 w-10 ${activeRingClass}`}
+                  width={48}
+                  height={48}
+                  className={`h-12 w-12 ${activeRingClass}`}
                   priority
                 />
                 <span className="text-xl">AIO</span>
