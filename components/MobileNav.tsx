@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import icon from "@/app/icon.png";
 import { APP_NAV, APPS, type AppKey } from "@/lib/app";
 
 type MobileNavProps = {
@@ -61,11 +60,11 @@ export default function MobileNav({ appKey = "main" }: MobileNavProps) {
                 onClick={() => setOpen(false)}
               >
                 <Image
-                  src={icon}
+                  src="/images/logo.png"
                   alt="Logo"
-                  width={48}
-                  height={48}
-                  className={`h-12 w-12 ${activeRingClass}`}
+                  width={36}
+                  height={36}
+                  className={`h-10 w-10 object-contain ${activeRingClass}`}
                   priority
                 />
                 <span className="text-xl">AIO</span>

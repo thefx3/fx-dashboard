@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ChevronDown, type LucideIcon } from "lucide-react";
 import icon from "@/app/icon.png";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import { APP_NAV, APPS, type AppKey } from "@/lib/app";
 import { DEFAULT_PROJECT_ICON, normalizeProjectIcon } from "@/lib/projects/icons";
 import { PROJECT_ICON_COMPONENTS } from "@/components/projects/projectIcons";
@@ -67,7 +67,7 @@ export default function NavBar({ appKey = "main", projects = [] }: NavBarProps) 
           alt="Logo"
           width={45}
           height={45}
-          className={`h-14 w-14  ${activeRingClass}`}
+          className={`h-16 w-16 ${activeRingClass}`}
           priority
         />
         <span className="text-2xl text-foreground">AIO</span>
