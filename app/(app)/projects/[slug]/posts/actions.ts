@@ -71,13 +71,13 @@ export async function createPost(formData: FormData) {
   const activity_type = String(formData.get("activity_type") ?? "other") as ActivityType;
 
   const happened_on = String(formData.get("happened_on") ?? "").trim(); // YYYY-MM-DD
+  const happened_time = String(formData.get("happened_time") ?? "").trim(); // HH:mm (optionnel)
   const durationHhmm = String(formData.get("duration_hhmm") ?? "").trim();
   const durationRaw = String(formData.get("duration_minutes") ?? "").trim();
   const durationUnit = String(formData.get("duration_unit") ?? "min").trim();
   const segmentNameRaw = String(formData.get("segment_name") ?? "");
 
   if (!slug) throw new Error("Missing slug");
-  if (!content) return; // pas de post vide
 
   let duration_minutes: number | null = null;
   if (durationHhmm) {
@@ -122,6 +122,9 @@ export async function createPost(formData: FormData) {
   );
 
   // 3) insert post
+  const happened_on_value =
+    happened_on && happened_time ? `${happened_on}T${happened_time}:00` : happened_on || undefined;
+
   const { error: insertErr } = await supabase.from("project_posts").insert({
     project_id: project.id,
     user_id: user.id,
@@ -130,7 +133,7 @@ export async function createPost(formData: FormData) {
     content,
     activity_type,
     duration_minutes,
-    happened_on: happened_on || undefined, // si vide -> default DB current_date
+    happened_on: happened_on_value, // date ou date+heure
   });
 
   if (insertErr) throw insertErr;

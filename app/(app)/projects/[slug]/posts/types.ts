@@ -24,10 +24,10 @@ export type PostRow = {
 };
 
 export const ACTIVITY_OPTIONS: ActivityOption[] = [
-  { value: "practice", label: "Pratique" },
-  { value: "reading", label: "Lecture" },
-  { value: "video", label: "Vidéo" },
-  { value: "theory", label: "Théorie" },
+  { value: "practice", label: "Practice" },
+  { value: "reading", label: "Reading" },
+  { value: "video", label: "Video" },
+  { value: "theory", label: "Theory" },
   { value: "test", label: "Test" },
-  { value: "other", label: "Autre" },
+  { value: "other", label: "Other" },
 ];

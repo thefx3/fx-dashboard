@@ -1,15 +1,13 @@
 import { Image, Paperclip, Video } from "lucide-react";
 
 import { createPost } from "./actions";
+import { DateField, TimeField } from "./DataFields";
 import { ACTIVITY_OPTIONS } from "./types";
 import type { SegmentRow } from "./types";
 import {
   attachmentButtonClass,
   buttonPrimaryClass,
   cardClass,
-  inputClass,
-  inputNarrowClass,
-  inputNarrowMutedClass,
   labelClass,
   textareaClass,
 } from "./ui";
@@ -18,30 +16,27 @@ type PostComposerProps = {
   slug: string;
   segments: SegmentRow[];
   todayISO: string;
-  todayLabel: string;
 };
 
 export default function PostComposer({
   slug,
   segments,
   todayISO,
-  todayLabel,
 }: PostComposerProps) {
   return (
     <form
       action={createPost}
-      className={`${cardClass} p-2 space-y-3 border border-accent/70`}
+      className={`${cardClass} p-2 space-y-3 border border-primary`}
     >
       <input type="hidden" name="slug" value={slug} />
 
       <div className="rounded-md p-1">
         <div className="grid">
-          <textarea
-            name="content"
-            required
-            className={textareaClass}
-            placeholder="Today..."
-          />
+        <textarea
+          name="content"
+          className={textareaClass}
+          placeholder="Today..."
+        />
         </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -74,13 +69,18 @@ export default function PostComposer({
           </label>
 
           <div className={attachmentButtonClass}>
-            <input
-              type="text"
-              readOnly
-              value={todayLabel}
-              className="border border-input rounded-md p-1 text-muted-foreground bg-muted"
+            <DateField
+              name="happened_on"
+              defaultValue={todayISO}
+              className="border border-input rounded-md p-1 text-muted-foreground bg-background"
             />
-            <input type="hidden" name="happened_on" value={todayISO} />
+          </div>
+
+          <div className={attachmentButtonClass}>
+            <TimeField
+              name="happened_time"
+              className="border border-input rounded-md p-1 text-muted-foreground bg-background"
+            />
           </div>
 
           <div className={attachmentButtonClass}>
@@ -95,13 +95,11 @@ export default function PostComposer({
           </div>
 
           <div className={attachmentButtonClass}>
-            <label className={labelClass}>Durée</label>
-            <input
+            <label className={labelClass}>Duration</label>
+            <TimeField
               name="duration_hhmm"
-              type="time"
               step={60}
               className="border border-input rounded-md p-1 bg-background text-muted-foreground"
-              placeholder="00:30"
             />
           </div>
 
@@ -127,7 +125,7 @@ export default function PostComposer({
 
         </div>
 
-        <button className={buttonPrimaryClass}>Publier</button>
+        <button className={buttonPrimaryClass}>Share</button>
           
         </div>
       </div>

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import PostComposer from "./PostComposer";
 import PostFeed from "./PostFeed";
 import type { PostRow, SegmentRow } from "./types";
+import PostNews from "./PostNews";
 
 export default async function ProjectPostsPage({
   params,
@@ -14,11 +15,6 @@ export default async function ProjectPostsPage({
   const supabase = await createClient();
   const today = new Date();
   const todayISO = today.toISOString().slice(0, 10);
-  const todayLabel = today.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
 
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
@@ -53,15 +49,17 @@ export default async function ProjectPostsPage({
   if (postsErr) throw postsErr;
 
   return (
-    <div className="py-6 space-y-6">
+    <div className="py-6 grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_250px] md:items-start">
+      <div className="space-y-6">
+        <PostComposer
+            slug={slug}
+            segments={segments ?? []}
+            todayISO={todayISO}
+        />
+        <PostFeed slug={slug} posts={posts ?? []} />
+      </div>
 
-      <PostComposer
-        slug={slug}
-        segments={segments ?? []}
-        todayISO={todayISO}
-        todayLabel={todayLabel}
-      />
-      <PostFeed slug={slug} posts={posts ?? []} />
+      <PostNews />
     </div>
   );
 }
