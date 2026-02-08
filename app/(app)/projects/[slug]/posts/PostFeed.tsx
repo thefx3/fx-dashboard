@@ -1,4 +1,11 @@
-import { Bookmark, Heart, MessageCircle, MoreHorizontal, Share2 } from "lucide-react";
+import {
+  Bookmark,
+  FileText,
+  Heart,
+  MessageCircle,
+  MoreHorizontal,
+  Share2,
+} from "lucide-react";
 import { deletePost } from "./actions";
 import type { PostRow } from "./types";
 import { cardClass, pillClass, subtleTextClass, tagTextClass } from "./ui";
@@ -56,6 +63,15 @@ type PostFeedProps = {
     return timeLabel ? `${day} ${month} ${year}, ${timeLabel}` : `${day} ${month} ${year}`;
   }
 
+  function formatFileSize(bytes: number | null) {
+    if (!bytes || bytes <= 0) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
+  }
+
 export default function PostFeed({ slug, posts }: PostFeedProps) {
   if (posts.length === 0) {
     return (
@@ -88,6 +104,55 @@ export default function PostFeed({ slug, posts }: PostFeedProps) {
                   {post.content}
                 </p>
               </div>
+
+              {post.project_post_attachments && post.project_post_attachments.length > 0 && (
+                <div className="space-y-2">
+                  {post.project_post_attachments.map((attachment) => {
+                    if (attachment.kind === "image") {
+                      return (
+                        <img
+                          key={attachment.id}
+                          src={attachment.public_url}
+                          alt={attachment.file_name ?? "Image"}
+                          className="w-full max-h-[360px] rounded-lg border border-border object-contain bg-muted/40"
+                        />
+                      );
+                    }
+
+                    if (attachment.kind === "video") {
+                      return (
+                        <video
+                          key={attachment.id}
+                          src={attachment.public_url}
+                          className="w-full max-h-[360px] rounded-lg border border-border bg-muted/40"
+                          controls
+                        />
+                      );
+                    }
+
+                    return (
+                      <a
+                        key={attachment.id}
+                        href={attachment.public_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex w-full items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        <FileText className="h-5 w-5" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {attachment.file_name ?? "Fichier"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {attachment.mime_type ?? "Document"}
+                            {attachment.size_bytes ? ` • ${formatFileSize(attachment.size_bytes)}` : ""}
+                          </p>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 {post.project_segments?.name && (

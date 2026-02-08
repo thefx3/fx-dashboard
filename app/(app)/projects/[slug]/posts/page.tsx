@@ -39,7 +39,7 @@ export default async function ProjectPostsPage({
   const { data: posts, error: postsErr } = await supabase
     .from("project_posts")
     .select(
-      "id,title,content,activity_type,duration_minutes,happened_on,created_at,segment_id,project_segments(name)"
+      "id,title,content,activity_type,duration_minutes,happened_on,created_at,segment_id,project_segments(name),project_post_attachments(id,kind,public_url,file_name,mime_type,size_bytes)"
     )
     .eq("project_id", project.id)
     .order("happened_on", { ascending: false })

@@ -5,6 +5,17 @@ export type ActivityOption = {
   label: string;
 };
 
+export type AttachmentKind = "image" | "video" | "file";
+
+export type AttachmentRow = {
+  id: string;
+  kind: AttachmentKind;
+  public_url: string;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+};
+
 export type SegmentRow = {
   id: string;
   name: string;
@@ -21,6 +32,7 @@ export type PostRow = {
   created_at: string;
   segment_id: string | null;
   project_segments?: { name: string | null } | null;
+  project_post_attachments?: AttachmentRow[] | null;
 };
 
 export const ACTIVITY_OPTIONS: ActivityOption[] = [
