@@ -82,7 +82,7 @@ export default function PostFeed({ slug, posts }: PostFeedProps) {
   return (
     <div className="space-y-3">
       {posts.map((post) => (
-        <article key={post.id} className={`${cardClass} border border-ring p-5`}>
+        <article key={post.id} className={`bg-muted/50 rounded p-5`}>
           <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
             <div className="min-w-0 space-y-3">
               <div className="flex items-start justify-between gap-3">

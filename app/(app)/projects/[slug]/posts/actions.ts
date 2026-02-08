@@ -268,6 +268,22 @@ export async function deletePost(formData: FormData) {
   const user = userData.user;
   if (userErr || !user) throw new Error("Not authenticated");
 
+  const { data: attachments, error: attachmentsErr } = await supabase
+    .from("project_post_attachments")
+    .select("storage_path")
+    .eq("post_id", postId);
+  if (attachmentsErr) throw attachmentsErr;
+
+  if (attachments && attachments.length > 0) {
+    const paths = attachments.map((item) => item.storage_path).filter(Boolean);
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabase.storage
+        .from(ATTACHMENTS_BUCKET)
+        .remove(paths);
+      if (storageErr) throw storageErr;
+    }
+  }
+
   const { error } = await supabase.from("project_posts").delete().eq("id", postId);
   if (error) throw error;
 

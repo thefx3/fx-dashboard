@@ -27,6 +27,7 @@ export default function AttachmentFields({
   labelClassName,
   inputClassName,
 }: AttachmentFieldsProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -77,6 +78,27 @@ export default function AttachmentFields({
     input.files = dataTransfer.files;
   }
 
+  function clearAll() {
+    setFilesByInput({
+      attachment_file: [],
+      attachment_photos: [],
+      attachment_videos: [],
+    });
+    setError(null);
+    setInputFiles(fileInputRef.current, []);
+    setInputFiles(photoInputRef.current, []);
+    setInputFiles(videoInputRef.current, []);
+  }
+
+  useEffect(() => {
+    const form = rootRef.current?.closest("form");
+    if (!form) return;
+
+    const handleSubmit = () => clearAll();
+    form.addEventListener("submit", handleSubmit);
+    return () => form.removeEventListener("submit", handleSubmit);
+  }, []);
+
   function handleChange(key: InputKey, files: FileList | null, input: HTMLInputElement | null) {
     const selected = files ? Array.from(files) : [];
     const existing = filesByInput[key];
@@ -116,7 +138,7 @@ export default function AttachmentFields({
   }
 
   return (
-    <>
+    <div ref={rootRef} className="contents">
       <label className={labelClassName}>
         <Paperclip className="h-4 w-4" />
         <input
@@ -199,6 +221,6 @@ export default function AttachmentFields({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
