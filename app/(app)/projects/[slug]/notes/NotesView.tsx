@@ -74,7 +74,7 @@ export default async function NotesView({
   const tasks = tasksColumnMissing ? [] : tasksResponse.data ?? [];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="py-6 space-y-6">
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
         <ProjectTasksPanel
           tasks={tasks}

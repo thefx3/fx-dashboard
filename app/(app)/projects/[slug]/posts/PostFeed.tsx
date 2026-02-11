@@ -1,18 +1,13 @@
-import {
-  Bookmark,
-  FileText,
-  Heart,
-  MessageCircle,
-  MoreHorizontal,
-  Share2,
-} from "lucide-react";
+import { Bookmark, FileText, Heart, MessageCircle, Share2 } from "lucide-react";
 import { deletePost } from "./actions";
-import type { PostRow } from "./types";
+import type { PostRow, SegmentRow } from "./types";
 import { cardClass, pillClass, subtleTextClass, tagTextClass } from "./ui";
+import PostEditDialog from "./PostEditDialog";
 
 type PostFeedProps = {
   slug: string;
   posts: PostRow[];
+  segments: SegmentRow[];
 };
 
   function capitalizeFirstLetter(name: string): string {
@@ -72,7 +67,7 @@ type PostFeedProps = {
     return `${mb.toFixed(1)} MB`;
   }
 
-export default function PostFeed({ slug, posts }: PostFeedProps) {
+export default function PostFeed({ slug, posts, segments }: PostFeedProps) {
   if (posts.length === 0) {
     return (
       <div className={`${cardClass} p-6 ${subtleTextClass}`}>Aucun post pour le moment.</div>
@@ -94,13 +89,11 @@ export default function PostFeed({ slug, posts }: PostFeedProps) {
                     </p>
                   </div>
                 </div>
-                <button className="text-muted-foreground hover:text-foreground" type="button">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
+                <PostEditDialog slug={slug} post={post} segments={segments} />
               </div>
 
               <div>
-                <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                <p className="mt-1 text-sm whitespace-pre-wrap">
                   {post.content}
                 </p>
               </div>

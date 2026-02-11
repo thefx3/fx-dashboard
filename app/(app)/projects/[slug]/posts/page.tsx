@@ -56,7 +56,7 @@ export default async function ProjectPostsPage({
             segments={segments ?? []}
             todayISO={todayISO}
         />
-        <PostFeed slug={slug} posts={posts ?? []} />
+        <PostFeed slug={slug} posts={posts ?? []} segments={segments ?? []} />
       </div>
 
       <PostNews />

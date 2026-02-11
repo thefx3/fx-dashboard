@@ -6,7 +6,7 @@ export default async function LearningView({
 ) {
     const { slug } = await params;
     return (
-        <div className="p-6">
+        <div>
             
             Learning Page for project {slug}
         

@@ -6,7 +6,7 @@ export default function LearningPage({
   params: { slug: string } | Promise<{ slug: string }>;
 }) {
   return (
-    <div className="p-6">
+    <div className="py-6">
 
         <LearningView params={params} />
         </div>

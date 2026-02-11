@@ -257,6 +257,83 @@ export async function createPost(formData: FormData) {
   revalidatePath(`/projects/${slug}/posts`);
 }
 
+export async function updatePost(formData: FormData) {
+  const slug = String(formData.get("slug") ?? "").trim();
+  const postId = String(formData.get("post_id") ?? "").trim();
+
+  const content = String(formData.get("content") ?? "").trim();
+  const activity_type = String(formData.get("activity_type") ?? "other") as ActivityType;
+
+  const happened_on = String(formData.get("happened_on") ?? "").trim(); // YYYY-MM-DD
+  const happened_time = String(formData.get("happened_time") ?? "").trim(); // HH:mm (optionnel)
+  const durationHhmm = String(formData.get("duration_hhmm") ?? "").trim();
+  const durationRaw = String(formData.get("duration_minutes") ?? "").trim();
+  const durationUnit = String(formData.get("duration_unit") ?? "min").trim();
+  const segmentNameRaw = String(formData.get("segment_name") ?? "");
+
+  if (!slug || !postId) throw new Error("Missing slug or post id");
+
+  let duration_minutes: number | null = null;
+  if (durationHhmm) {
+    const [hh, mm] = durationHhmm.split(":");
+    const hours = Number(hh);
+    const minutes = Number(mm);
+    if (Number.isFinite(hours) && Number.isFinite(minutes)) {
+      const total = hours * 60 + minutes;
+      duration_minutes = total >= 0 ? total : null;
+    }
+  } else if (durationRaw) {
+    const durationValue = Number(durationRaw);
+    if (Number.isFinite(durationValue)) {
+      const minutes = durationUnit === "h" ? durationValue * 60 : durationValue;
+      const rounded = Math.round(minutes);
+      duration_minutes = rounded >= 0 ? rounded : null;
+    }
+  }
+
+  const supabase = await createClient();
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (userErr || !user) throw new Error("Not authenticated");
+
+  const { data: project, error: projErr } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("slug", slug)
+    .eq("user_id", user.id)
+    .single();
+
+  if (projErr || !project) throw new Error("Project not found");
+
+  const segment_id = await resolveSegmentId(
+    supabase,
+    project.id,
+    user.id,
+    segmentNameRaw
+  );
+
+  const happened_on_value =
+    happened_on && happened_time ? `${happened_on}T${happened_time}:00` : happened_on || null;
+
+  const { error: updateErr } = await supabase
+    .from("project_posts")
+    .update({
+      content,
+      activity_type,
+      duration_minutes,
+      segment_id,
+      happened_on: happened_on_value,
+    })
+    .eq("id", postId)
+    .eq("project_id", project.id)
+    .eq("user_id", user.id);
+
+  if (updateErr) throw updateErr;
+
+  revalidatePath(`/projects/${slug}/posts`);
+}
+
 export async function deletePost(formData: FormData) {
   const slug = String(formData.get("slug") ?? "").trim();
   const postId = String(formData.get("post_id") ?? "").trim();
