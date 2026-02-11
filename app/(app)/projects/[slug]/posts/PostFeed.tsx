@@ -129,7 +129,7 @@ export default function PostFeed({ slug, posts, segments }: PostFeedProps) {
                         href={attachment.public_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex w-full items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+                        className="flex w-full items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground transition hover:text-accent"
                       >
                         <FileText className="h-5 w-5" />
                         <div className="min-w-0">
@@ -160,19 +160,19 @@ export default function PostFeed({ slug, posts, segments }: PostFeedProps) {
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex flex-wrap items-center gap-4">
-                  <button className="inline-flex items-center gap-2 hover:text-foreground cursor-pointer" type="button">
+                  <button className="inline-flex items-center gap-2 text-muted-foreground transition hover:text-accent cursor-pointer" type="button">
                     <Heart className="h-4 w-4" />
                     Like
                   </button>
-                  <button className="inline-flex items-center gap-2 hover:text-foreground cursor-pointer" type="button">
+                  <button className="inline-flex items-center gap-2 text-muted-foreground transition hover:text-accent cursor-pointer" type="button">
                     <MessageCircle className="h-4 w-4" />
                     Comment
                   </button>
-                  <button className="inline-flex items-center gap-2 hover:text-foreground cursor-pointer" type="button">
+                  <button className="inline-flex items-center gap-2 text-muted-foreground transition hover:text-accent cursor-pointer" type="button">
                     <Bookmark className="h-4 w-4" />
                     Save
                   </button>
-                  <button className="inline-flex items-center gap-2 hover:text-foreground cursor-pointer" type="button">
+                  <button className="inline-flex items-center gap-2 text-muted-foreground transition hover:text-accent cursor-pointer" type="button">
                     <Share2 className="h-4 w-4" />
                     Share
                   </button>
@@ -181,7 +181,9 @@ export default function PostFeed({ slug, posts, segments }: PostFeedProps) {
                 <form action={deletePost} className="ml-auto">
                   <input type="hidden" name="slug" value={slug} />
                   <input type="hidden" name="post_id" value={post.id} />
-                  <button className="text-xs hover:text-primary cursor-pointer">Delete</button>
+                  <button className="text-xs text-muted-foreground transition hover:text-accent hover:underline hover:decoration-accent/60 cursor-pointer">
+                    Delete
+                  </button>
                 </form>
               </div>
             </div>

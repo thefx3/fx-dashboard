@@ -196,7 +196,7 @@ export default function AttachmentFields({
               >
                 <button
                   type="button"
-                  className="absolute right-2 top-2 h-6 w-6 rounded-full bg-background/80 text-xs text-muted-foreground hover:text-foreground"
+                  className="absolute right-2 top-2 h-6 w-6 rounded-full bg-background/80 text-xs text-muted-foreground transition hover:text-accent"
                   onClick={() => removeFile(preview.id)}
                 >
                   ×

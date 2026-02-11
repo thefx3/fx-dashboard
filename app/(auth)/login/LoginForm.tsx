@@ -82,7 +82,7 @@ export default function LoginForm() {
 
           <button
             disabled={pending}
-            className="cursor-pointer mt-1 w-full rounded-md bg-popover-foreground px-4 py-2 font-semibold text-primary-foreground transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer mt-1 w-full rounded-md bg-popover-foreground px-4 py-2 font-semibold text-primary-foreground transition hover:ring-1 hover:ring-accent/50 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
             type="submit"
           >
             {pending ? "Connexion..." : "Se connecter"}

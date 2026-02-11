@@ -62,7 +62,7 @@ export default function PostEditDialog({ slug, post, segments }: PostEditDialogP
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-muted-foreground hover:text-foreground cursor-pointer hover:scale-110 transition-transform"
+        className="text-muted-foreground hover:text-accent cursor-pointer hover:scale-110 transition"
         aria-label="Edit post"
       >
         <MoreHorizontal className="h-4 w-4" />
@@ -86,7 +86,7 @@ export default function PostEditDialog({ slug, post, segments }: PostEditDialogP
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="text-xs text-muted-foreground transition hover:text-accent"
               >
                 Close
               </button>
@@ -176,7 +176,7 @@ export default function PostEditDialog({ slug, post, segments }: PostEditDialogP
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="h-9 rounded-md border border-input px-3 text-xs text-muted-foreground hover:text-foreground"
+                  className="h-9 rounded-md border border-input px-3 text-xs text-muted-foreground transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent"
                 >
                   Cancel
                 </button>

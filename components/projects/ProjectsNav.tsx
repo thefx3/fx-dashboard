@@ -47,7 +47,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
           onClick={() => setIsCollapsed((prev) => !prev)}
           aria-controls={contentId}
           aria-expanded={!isCollapsed}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-primary/20"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border transition hover:bg-accent/10 hover:border-accent/40"
           aria-label={isCollapsed ? "Display projects" : "Hide projects"}
         >
           <ChevronLeft
@@ -90,7 +90,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
                   "flex items-center gap-2 rounded-md px-3 py-2 text-left uppercase tracking-wide font-medium break-words flex-1 lg:flex-none",
                   isActive
                     ? "bg-foreground text-accent shadow-md"
-                    : "hover:bg-primary/20",
+                    : "hover:bg-accent/10",
                 ].join(" ")}
               >
                 <Icon className="h-4 w-4" aria-hidden="true" />
@@ -104,7 +104,7 @@ export default function ProjectsNav({ projects }: { projects: ProjectRow[] }) {
       <Link
         href="/projects"
         className={[
-          "mt-3 lg:mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-primary/20 text-sm font-semibold",
+          "mt-3 lg:mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition hover:bg-accent/10 text-sm font-semibold",
           isCollapsed ? "hidden" : "",
         ].join(" ")}
       >

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { APP_NAV, APPS, type AppKey } from "@/lib/app";
+import BrandLogo from "@/components/BrandLogo";
 
 type MobileNavProps = {
   appKey?: AppKey;
@@ -19,6 +19,8 @@ export default function MobileNav({ appKey = "main" }: MobileNavProps) {
   const activeRingClass = app?.colorClass
     ? app.colorClass.replace(/^text-/, "ring-")
     : "ring-slate-900/20";
+  const logoWrapClass = "relative inline-flex h-9 w-9 items-center justify-center";
+  const logoImageClass = "h-9 w-9 object-contain";
 
   useEffect(() => {
     if (!open) return;
@@ -30,9 +32,9 @@ export default function MobileNav({ appKey = "main" }: MobileNavProps) {
   }, [open]);
 
   const navLinkClass =
-    "group inline-flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold tracking-wide transition hover:bg-primary/20 hover:text-foreground";
+    "group inline-flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold tracking-wide transition hover:bg-accent/10 hover:text-accent";
   const navLinkActiveClass =
-    "shadow-sm ring-1 ring-primary/30 hover:bg-accent/90 bg-foreground text-accent";
+    "shadow-sm ring-1 ring-primary/30 hover:bg-accent/10 bg-foreground text-accent";
 
   return (
     <>
@@ -59,21 +61,10 @@ export default function MobileNav({ appKey = "main" }: MobileNavProps) {
                 className="inline-flex items-center gap-3 text-lg font-semibold uppercase tracking-[0.25em]"
                 onClick={() => setOpen(false)}
               >
-                <span className="relative inline-flex h-10 w-10 items-center justify-center">
-                  <Image
-                    src="/logo-white.png"
-                    alt="Logo"
-                    width={36}
-                    height={36}
-                    className={`h-10 w-10 object-contain ${activeRingClass} dark:hidden`}
-                    priority
-                  />
-                  <Image
-                    src="/logo-black.png"
-                    alt="Logo"
-                    width={36}
-                    height={36}
-                    className={`hidden h-10 w-10 object-contain ${activeRingClass} dark:block`}
+                <span className={logoWrapClass}>
+                  <BrandLogo
+                    size={36}
+                    className={`${logoImageClass} ${activeRingClass}`}
                     priority
                   />
                 </span>
@@ -115,7 +106,7 @@ export default function MobileNav({ appKey = "main" }: MobileNavProps) {
                   >
                     <Icon
                       className={`h-4 w-4 ${
-                        isActive ? "text-accent" : "group-hover:text-primary"
+                        isActive ? "text-accent" : "group-hover:text-accent"
                       }`}
                       aria-hidden
                     />

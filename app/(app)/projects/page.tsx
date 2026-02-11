@@ -41,7 +41,7 @@ export default async function ProjectsIndexPage() {
                 <div className="min-w-0">
                   <Link
                     href={projectHref}
-                    className="font-medium hover:underline"
+                    className="font-medium transition hover:text-accent hover:underline hover:decoration-accent/60"
                   >
                     {project.name}
                   </Link>
@@ -53,7 +53,7 @@ export default async function ProjectsIndexPage() {
                 <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                   <Link
                     href={projectHref}
-                    className="inline-flex h-8 w-full items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted sm:w-auto"
+                    className="inline-flex h-8 w-full items-center justify-center rounded-md border border-border px-3 text-xs transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent sm:w-auto"
                   >
                     Open
                   </Link>
@@ -88,7 +88,7 @@ export default async function ProjectsIndexPage() {
               className="h-10 rounded-md border border-input bg-background px-3"
             />
             <ProjectIconPicker name="icon" defaultValue={DEFAULT_PROJECT_ICON} />
-            <button className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-primary-foreground">
+            <button className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-primary-foreground transition hover:bg-primary/90 hover:ring-1 hover:ring-accent/40">
               Create
             </button>
           </form>

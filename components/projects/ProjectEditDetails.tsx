@@ -46,7 +46,7 @@ export default function ProjectEditDetails({
 
   return (
     <details ref={detailsRef} className="relative w-full sm:w-auto">
-      <summary className="list-none flex h-8 w-full cursor-pointer items-center justify-center rounded-md border border-border px-3 text-xs hover:bg-muted sm:w-auto">
+      <summary className="list-none flex h-8 w-full cursor-pointer items-center justify-center rounded-md border border-border px-3 text-xs transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent sm:w-auto">
         Edit
       </summary>
       <div className="absolute right-0 z-10 mt-2 w-64 rounded-md border border-border bg-background p-3 shadow-lg">
@@ -85,7 +85,7 @@ export default function ProjectEditDetails({
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className={`${buttonBase} flex-1 bg-primary text-primary-foreground`}
+              className={`${buttonBase} flex-1 bg-primary text-primary-foreground hover:bg-primary/90 hover:ring-1 hover:ring-accent/40`}
             >
               Save
             </button>

@@ -38,7 +38,7 @@ export default function ProjectTab({ slug }: { slug?: string }) {
             aria-current={isActive ? "page" : undefined}
             className={[
               "flex items-center justify-center text-md transition px-2",
-              isActive ? "bg-accent/10 font-semibold border-b-4 border-accent" : "hover:bg-primary/10",
+              isActive ? "bg-accent/10 font-semibold border-b-4 border-accent" : "hover:bg-accent/10",
             ].join(" ")}
           >
             {tab.label}

@@ -54,7 +54,7 @@ export default function ProjectTasksPanel({
                 "rounded-md border px-2 py-1",
                 filter === "open"
                   ? "border-foreground bg-foreground text-accent"
-                  : "border-border text-muted-foreground hover:bg-muted",
+                  : "border-border text-muted-foreground transition hover:bg-accent/10",
               ].join(" ")}
             >
               To do
@@ -66,7 +66,7 @@ export default function ProjectTasksPanel({
                 "rounded-md border px-2 py-1",
                 filter === "done"
                   ? "border-foreground bg-foreground text-accent"
-                  : "border-border text-muted-foreground hover:bg-muted",
+                  : "border-border text-muted-foreground transition hover:bg-accent/10",
               ].join(" ")}
             >
               Finished
@@ -91,7 +91,7 @@ export default function ProjectTasksPanel({
               placeholder="Nouvelle tache"
               className={`${inputFieldFocus} flex-1`}
             />
-            <button className="h-9 rounded-md bg-primary px-4 text-sm text-primary-foreground">
+            <button className="h-9 rounded-md bg-primary px-4 text-sm text-primary-foreground transition hover:bg-primary/90 hover:ring-1 hover:ring-accent/40">
               Add
             </button>
           </form>
@@ -130,7 +130,7 @@ export default function ProjectTasksPanel({
                     <form action={deleteAction} className="ml-auto">
                       <input type="hidden" name="task_id" value={task.id} />
                       <input type="hidden" name="project_slug" value={projectSlug} />
-                      <button className={`${textMuted} hover:text-foreground`}>
+                      <button className={`${textMuted} transition hover:text-accent hover:underline hover:decoration-accent/60`}>
                         Delete
                       </button>
                     </form>

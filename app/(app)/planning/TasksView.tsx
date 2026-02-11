@@ -29,7 +29,7 @@ const PRIMARY_BUTTON_CLASS =
 const FILTER_BUTTON_BASE =
   "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left";
 const FILTER_BUTTON_ACTIVE = "bg-foreground text-accent shadow-md";
-const FILTER_BUTTON_INACTIVE = "hover:bg-primary/20";
+const FILTER_BUTTON_INACTIVE = "hover:bg-accent/10";
 const FILTER_COUNT_BADGE_CLASS =
   "ml-auto rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground";
 const STATUS_BADGE_CLASS =
@@ -37,20 +37,21 @@ const STATUS_BADGE_CLASS =
 const CARD_CLASS = "w-full grid grid-cols-3 items-center gap-3 rounded-xl border border-border bg-card p-2";
 const TAG_CLASS = "text-xs rounded-md bg-muted px-2 py-1";
 const ACTION_BUTTON_CLASS =
-  "h-8 text-sm rounded-md border border-border bg-background px-3 hover:bg-muted";
+  "h-8 text-sm rounded-md border border-border bg-background px-3 transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent";
 const ACTION_BUTTON_ACCENT_CLASS =
-  "h-8 text-sm rounded-md border border-border bg-accent/70 px-3 hover:bg-accent/90";
+  "h-8 text-sm rounded-md border border-primary/40 bg-primary/10 px-3 text-primary transition hover:bg-primary/15 hover:ring-1 hover:ring-accent/40";
 const ACTION_BUTTON_DESTRUCTIVE_CLASS =
-  "h-8 text-sm rounded-md bg-destructive/80 px-3 text-destructive-foreground hover:bg-destructive/90";
+  "h-8 text-sm rounded-md bg-destructive/80 px-3 text-destructive-foreground transition hover:bg-destructive/90";
 const CALENDAR_NAV_BUTTON_CLASS =
-  "cursor-pointer rounded-md border border-border px-2 py-1 text-md hover:bg-muted";
+  "cursor-pointer rounded-md border border-border px-2 py-1 text-md transition hover:border-accent/40 hover:bg-accent/10";
 const CALENDAR_DAY_BUTTON_CLASS =
-  "rounded-full border border-border px-2 py-0.5 text-xs font-medium hover:bg-accent/20";
+  "rounded-full border border-border px-2 py-0.5 text-xs font-medium transition hover:bg-accent/10 hover:text-accent";
 const MODAL_INPUT_CLASS = "h-9 rounded-md border border-input bg-background px-3";
 const MODAL_SELECT_CLASS = "h-9 rounded-md border border-input bg-background px-2";
 const MODAL_TEXTAREA_CLASS =
   "min-h-20 rounded-md border border-input bg-background px-3 py-2";
-const MODAL_CANCEL_BUTTON_CLASS = "h-9 rounded-md border border-border px-4 hover:bg-muted";
+const MODAL_CANCEL_BUTTON_CLASS =
+  "h-9 rounded-md border border-border px-4 transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent";
 const MODAL_PRIMARY_BUTTON_CLASS =
   "h-9 rounded-md bg-primary px-4 text-primary-foreground";
 
@@ -66,7 +67,7 @@ const FILTER_ICONS: Record<TaskFilter, LucideIcon> = {
 
 const VIEW_TOGGLE_BASE_CLASS = "cursor-pointer h-8 px-3 rounded-md";
 const VIEW_TOGGLE_ACTIVE_CLASS = "font-bold btn-tab--active bg-accent/20 shadow-md";
-const VIEW_TOGGLE_INACTIVE_CLASS = "hover:bg-primary/20";
+const VIEW_TOGGLE_INACTIVE_CLASS = "hover:bg-accent/10";
 
 //MAIN COMPONENT
 export function TasksView({ tasks }: { tasks: TaskRow[] }) {
@@ -501,7 +502,7 @@ function DayTasksList({
           key={task.id}
           type="button"
           onClick={() => onSelectTask(task)}
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-left hover:bg-muted"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-left transition hover:border-accent/40 hover:bg-accent/10"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="font-medium">{task.title}</span>
@@ -636,7 +637,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-sm text-muted-foreground transition hover:text-accent"
           >
             Close
           </button>

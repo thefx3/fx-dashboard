@@ -4,64 +4,77 @@
    Palette + Fonts (base)
 ------------------------------ */
 :root {
-  /* Palette (base cosmique) */
-  --color-night: #0A1628; /* Bleu nuit profond */
-  --color-cosmos: #1E3A5F; /* Bleu cosmos */
-  --color-nebula: #E94B6C; /* Rose nébuleuse */
-  --color-stellar: #FF6B4A; /* Orange stellaire */
-  --color-celeste: #4A9FFF; /* Bleu céleste */
-  --color-violet: #8B5FAD; /* Violet spatial */
-  --color-turquoise: #2DD4BF; /* Turquoise */
-  --color-coral: #FFA69E; /* Corail doux */
-  --color-star: #E5E7EB; /* Gris étoilé */
-  --color-anthracite: #374151; /* Gris anthracite */
-  --color-white: #FFFFFF; /* Blanc pur */
+  /* Neutres (fond & texte) */
+  --neutral-950: #050506;
+  --neutral-900: #0B0B0C;
+  --neutral-800: #141416;
+  --neutral-700: #1C1C1F;
+  --neutral-50: #FFFFFF;
+  --neutral-100: #F7F7F6;
+  --neutral-200: #F1F1EF;
+  --neutral-300: #E7E7E4;
 
-  /* Nuanciers utiles */
-  --color-night-90: #0d1b33;
-  --color-cosmos-80: #26486f;
-  --color-cosmos-60: #2f567f;
-  --color-mist: #F6F8FC;
+  /* Vert luxe (signature) */
+  --green-900: #0F1F17;
+  --green-800: #163024;
+  --green-700: #1F3D2B;
+  --green-600: #2A5239;
+  --green-500: #356B4A;
+  --green-400: #5A8F6C;
+  --green-300: #8FB79B;
+  --green-200: #C7DDD0;
+  --green-100: #E6F1EA;
+
+  /* Or discret (accent émotionnel) */
+  --gold-900: #5A4A1F;
+  --gold-800: #7A652C;
+  --gold-700: #9B823A;
+  --gold-600: #B89A4C;
+  --gold-500: #C6A85A;
+  --gold-400: #D3B978;
+  --gold-300: #E1CC98;
+  --gold-200: #EFE2BD;
+  --gold-100: #F8F2DE;
 
   /* Fonts */
-  --var-font-title: Merriweather, serif;
-  --var-font-sans: Inter, sans-serif;
+  --var-font-title: "Playfair Display", "Times New Roman", serif;
+  --var-font-sans: "Inter", "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* -----------------------------
      Shadcn tokens (LIGHT)
      (rôles UI, pas la palette)
   ------------------------------ */
-  --background: var(--color-mist);
-  --foreground: var(--color-night);
+  --background: var(--neutral-100);
+  --foreground: var(--neutral-900);
 
-  --card: var(--color-white);
-  --card-foreground: var(--color-night);
+  --card: var(--neutral-50);
+  --card-foreground: var(--neutral-900);
 
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-night);
+  --popover: var(--neutral-50);
+  --popover-foreground: var(--neutral-900);
 
-  --muted: var(--color-star);
-  --muted-foreground: rgba(55, 65, 81, 0.75);
+  --muted: var(--neutral-200);
+  --muted-foreground: rgba(28, 28, 31, 0.7);
 
-  --border: rgba(55, 65, 81, 0.18);
-  --input: rgba(55, 65, 81, 0.22);
-  --ring: rgba(74, 159, 255, 0.45);
+  --border: rgba(20, 20, 22, 0.12);
+  --input: rgba(20, 20, 22, 0.18);
+  --ring: rgba(198, 168, 90, 0.45);
 
-  --primary: var(--color-nebula);
-  --primary-foreground: var(--color-white);
+  --primary: var(--green-700);
+  --primary-foreground: var(--neutral-50);
 
-  --secondary: var(--color-stellar);
-  --secondary-foreground: var(--color-night);
+  --secondary: var(--green-600);
+  --secondary-foreground: var(--neutral-50);
 
-  --accent: var(--color-celeste);
-  --accent-foreground: var(--color-night);
+  --accent: var(--gold-500);
+  --accent-foreground: var(--neutral-900);
 
   --destructive: #ef4444;
-  --destructive-foreground: var(--color-white);
+  --destructive-foreground: var(--neutral-50);
 
   /* Custom (non-shadcn) */
-  --success: var(--color-turquoise);
-  --success-foreground: var(--color-night);
+  --success: var(--green-400);
+  --success-foreground: var(--neutral-900);
 
   /* Optionnel mais utile (arrondis cohérents UI) */
   --radius: 14px;
@@ -71,36 +84,36 @@
    Dark mode (next-themes ajoute class="dark" sur <html>)
 ------------------------------ */
 .dark {
-  --background: var(--color-night);
-  --foreground: #f5f7ff;
+  --background: var(--neutral-900);
+  --foreground: #F5F5F4;
 
-  --card: var(--color-night-90);
-  --card-foreground: #f5f7ff;
+  --card: var(--neutral-800);
+  --card-foreground: #F5F5F4;
 
-  --popover: var(--color-cosmos-80);
-  --popover-foreground: #f5f7ff;
+  --popover: var(--neutral-800);
+  --popover-foreground: #F5F5F4;
 
-  --muted: rgba(30, 58, 95, 0.45);
-  --muted-foreground: rgba(229, 231, 235, 0.7);
+  --muted: var(--neutral-700);
+  --muted-foreground: rgba(245, 245, 244, 0.7);
 
-  --border: rgba(229, 231, 235, 0.12);
-  --input: rgba(229, 231, 235, 0.14);
-  --ring: rgba(74, 159, 255, 0.55);
+  --border: rgba(245, 245, 244, 0.12);
+  --input: rgba(245, 245, 244, 0.16);
+  --ring: rgba(198, 168, 90, 0.55);
 
-  --primary: var(--color-turquoise);
-  --primary-foreground: var(--color-night);
+  --primary: var(--green-500);
+  --primary-foreground: var(--neutral-50);
 
-  --secondary: var(--color-stellar);
-  --secondary-foreground: var(--color-night);
+  --secondary: var(--green-600);
+  --secondary-foreground: var(--neutral-50);
 
-  --accent: var(--color-celeste);
-  --accent-foreground: var(--color-night);
+  --accent: var(--gold-500);
+  --accent-foreground: var(--neutral-900);
 
-  --success: var(--color-turquoise);
-  --success-foreground: var(--color-night);
+  --success: var(--green-400);
+  --success-foreground: var(--neutral-900);
 
   --destructive: #ef4444;
-  --destructive-foreground: var(--color-white);
+  --destructive-foreground: var(--neutral-50);
 }
 
 /* -----------------------------
@@ -154,6 +167,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--var-font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--var-font-title);
 }
 
 /* Subtle drifting background for space effect */

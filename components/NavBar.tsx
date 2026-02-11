@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, type LucideIcon } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { APP_NAV, APPS, type AppKey } from "@/lib/app";
 import { DEFAULT_PROJECT_ICON, normalizeProjectIcon } from "@/lib/projects/icons";
 import { PROJECT_ICON_COMPONENTS } from "@/components/projects/projectIcons";
@@ -24,12 +24,12 @@ type NavBarProps = {
 };
 
 const NAV_LINK_BASE =
-  "group inline-flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold tracking-wide transition hover:bg-primary/20 hover:text-foreground";
+  "group inline-flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold tracking-wide transition hover:bg-accent/10 hover:text-accent";
 const NAV_LINK_ACTIVE =
-  "shadow-sm ring-1 ring-primary/30 hover:bg-accent/90 bg-foreground text-accent";
+  "shadow-sm ring-1 ring-primary/30 hover:bg-accent/10 bg-foreground text-accent";
 const NAV_LINK_INACTIVE = "text-muted-foreground";
 const NAV_ICON_ACTIVE = "text-accent";
-const NAV_ICON_INACTIVE = "group-hover:text-primary";
+const NAV_ICON_INACTIVE = "group-hover:text-accent";
 
 const PROJECTS_EMPTY_CLASS = `pl-11 ${textMuted}`;
 const PROJECTS_SUBNAV_CLASS = "flex flex-col gap-1 pl-6";
@@ -37,9 +37,11 @@ const PROJECTS_ITEM_BASE =
   "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] font-semibold uppercase tracking-widest";
 const PROJECTS_ITEM_ACTIVE = "text-accent bg-primary/20 shadow-sm";
 const PROJECTS_ITEM_INACTIVE =
-  "text-muted-foreground hover:bg-primary/10 hover:text-foreground";
+  "text-muted-foreground hover:bg-accent/10 hover:text-accent";
 const PROJECTS_TOGGLE_BASE =
   "absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md transition cursor-pointer";
+const LOGO_WRAP_CLASS = "relative inline-flex h-14 w-14 items-center justify-center";
+const LOGO_IMAGE_CLASS = "h-14 w-14 object-contain";
 
 export default function NavBar({ appKey = "main", projects = [] }: NavBarProps) {
   const pathname = usePathname();
@@ -61,25 +63,13 @@ export default function NavBar({ appKey = "main", projects = [] }: NavBarProps) 
         href="/"
         className="mb-8 inline-flex items-center gap-4 px-6 pt-6 text-lg font-semibold uppercase tracking-[0.25em] text-foreground"
       >
-        <span className="relative inline-flex h-16 w-16 items-center justify-center">
-          <Image
-            src="/logo-white.png"
-            alt="Logo"
-            width={45}
-            height={45}
-            className={`h-16 w-16 object-contain ${activeRingClass} dark:hidden`}
-            priority
-          />
-          <Image
-            src="/logo-black.png"
-            alt="Logo"
-            width={45}
-            height={45}
-            className={`hidden h-16 w-16 object-contain ${activeRingClass} dark:block`}
+        <span className={LOGO_WRAP_CLASS}>
+          <BrandLogo
+            size={56}
+            className={`${LOGO_IMAGE_CLASS} ${activeRingClass}`}
             priority
           />
         </span>
-        <span className="text-2xl text-foreground">AIO</span>
       </Link>
 
       <nav className="flex flex-1 flex-col gap-3 px-4 pb-6">

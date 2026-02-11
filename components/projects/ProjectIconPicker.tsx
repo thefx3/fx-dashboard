@@ -59,7 +59,7 @@ export default function ProjectIconPicker({
 
       {extraIcons.length > 0 && (
         <details ref={detailsRef} className="relative">
-          <summary className="list-none inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-input text-muted-foreground hover:bg-muted">
+          <summary className="list-none inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-input text-muted-foreground transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent">
             <Plus className="h-4 w-4" aria-hidden="true" />
           </summary>
           <div className="w-60 absolute right-0 mt-2 grid grid-cols-5 rounded-md border border-border bg-background p-2 shadow-lg">
