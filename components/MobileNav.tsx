@@ -59,14 +59,24 @@ export default function MobileNav({ appKey = "main" }: MobileNavProps) {
                 className="inline-flex items-center gap-3 text-lg font-semibold uppercase tracking-[0.25em]"
                 onClick={() => setOpen(false)}
               >
-                <Image
-                  src="/images/logo.png"
-                  alt="Logo"
-                  width={36}
-                  height={36}
-                  className={`h-10 w-10 object-contain ${activeRingClass}`}
-                  priority
-                />
+                <span className="relative inline-flex h-10 w-10 items-center justify-center">
+                  <Image
+                    src="/logo-white.png"
+                    alt="Logo"
+                    width={36}
+                    height={36}
+                    className={`h-10 w-10 object-contain ${activeRingClass} dark:hidden`}
+                    priority
+                  />
+                  <Image
+                    src="/logo-black.png"
+                    alt="Logo"
+                    width={36}
+                    height={36}
+                    className={`hidden h-10 w-10 object-contain ${activeRingClass} dark:block`}
+                    priority
+                  />
+                </span>
                 <span className="text-xl">AIO</span>
               </Link>
               <button

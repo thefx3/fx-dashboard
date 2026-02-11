@@ -6,8 +6,11 @@ export const metadata: Metadata = {
   title: "My dashboard",
   description: "Admin & Personnal Dashboard",
   icons: {
-    icon: "/icon.png",
-    apple: "/apple-icon.png",
+    icon: [
+      { url: "/logo-white.png", media: "(prefers-color-scheme: light)" },
+      { url: "/logo-black.png", media: "(prefers-color-scheme: dark)" },
+    ],
+    apple: "/logo-white.png",
   },
 };
 
