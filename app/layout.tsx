@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 
@@ -9,21 +9,24 @@ const inter = Inter({
   variable: "--var-font-sans",
 });
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--var-font-title",
-});
-
 export const metadata: Metadata = {
-  title: "My dashboard",
-  description: "Admin & Personnal Dashboard",
+  title: "F PAIR_",
+  description: "Personal systems for trading, discipline and performance.",
   icons: {
     icon: [
-      { url: "/logo-light.png", media: "(prefers-color-scheme: light)" },
-      { url: "/logo-dark.png", media: "(prefers-color-scheme: dark)" },
+      {
+        url: "/brand/fp-dark.svg",
+        type: "image/svg+xml",
+      },
+      {
+        url: "/brand/fp-32-dark.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+      { url: "/brand/fp-128-dark.png", sizes: "128x128", type: "image/png" },
+      { url: "/brand/fp-512-dark.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: "/logo-light.png",
+    apple: [{ url: "/brand/fp-apple.png", sizes: "1024x1024", type: "image/png" }],
   },
 };
 
@@ -32,9 +35,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
-      lang="en"
+      lang="fr"
       suppressHydrationWarning
-      className={`${inter.variable} ${playfair.variable}`}
+      className={inter.variable}
     >
       <body className="antialiased">
         <ThemeProvider

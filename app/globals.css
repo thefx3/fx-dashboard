@@ -1,171 +1,80 @@
 @import "tailwindcss";
 
-/* -----------------------------
-   Palette + Fonts (base)
------------------------------- */
 :root {
-  /* Neutres (fond & texte) */
-  --neutral-950: #050506;
-  --neutral-900: #0B0B0C;
-  --neutral-800: #141416;
-  --neutral-700: #1C1C1F;
-  --neutral-50: #FFFFFF;
-  --neutral-100: #F7F7F6;
-  --neutral-200: #F1F1EF;
-  --neutral-300: #E7E7E4;
+  --site: #f6f3ee;
+  --site-foreground: #121212;
+  --site-muted: rgba(18, 18, 18, 0.58);
+  --site-border: rgba(18, 18, 18, 0.12);
+  --site-panel: #fffdf8;
+  --ink: #121212;
+  --brand: #9a784d;
+  --brand-soft: #ebe2d4;
 
-  /* Vert luxe (signature) */
-  --green-900: #0F1F17;
-  --green-800: #163024;
-  --green-700: #1F3D2B;
-  --green-600: #2A5239;
-  --green-500: #356B4A;
-  --green-400: #5A8F6C;
-  --green-300: #8FB79B;
-  --green-200: #C7DDD0;
-  --green-100: #E6F1EA;
-
-  /* Or discret (accent émotionnel) */
-  --gold-900: #5A4A1F;
-  --gold-800: #7A652C;
-  --gold-700: #9B823A;
-  --gold-600: #B89A4C;
-  --gold-500: #C6A85A;
-  --gold-400: #D3B978;
-  --gold-300: #E1CC98;
-  --gold-200: #EFE2BD;
-  --gold-100: #F8F2DE;
-
-  /* Fonts */
-  --var-font-title: "Playfair Display", "Times New Roman", serif;
+  --background: var(--site);
+  --foreground: var(--site-foreground);
+  --card: var(--site-panel);
+  --card-foreground: var(--site-foreground);
+  --popover: var(--site-panel);
+  --popover-foreground: var(--site-foreground);
+  --muted: #ebe2d4;
+  --muted-foreground: var(--site-muted);
+  --border: var(--site-border);
+  --input: rgba(18, 18, 18, 0.16);
+  --ring: rgba(154, 120, 77, 0.2);
+  --primary: var(--ink);
+  --primary-foreground: #ffffff;
+  --secondary: var(--brand-soft);
+  --secondary-foreground: var(--brand);
+  --accent: var(--brand);
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --radius: 8px;
   --var-font-sans: "Inter", "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
-
-  /* -----------------------------
-     Shadcn tokens (LIGHT)
-     (rôles UI, pas la palette)
-  ------------------------------ */
-  --background: var(--neutral-100);
-  --foreground: var(--neutral-900);
-
-  --card: var(--neutral-50);
-  --card-foreground: var(--neutral-900);
-
-  --popover: var(--neutral-50);
-  --popover-foreground: var(--neutral-900);
-
-  --muted: var(--neutral-200);
-  --muted-foreground: rgba(28, 28, 31, 0.7);
-
-  --border: rgba(20, 20, 22, 0.12);
-  --input: rgba(20, 20, 22, 0.18);
-  --ring: rgba(198, 168, 90, 0.45);
-
-  --primary: var(--green-700);
-  --primary-foreground: var(--neutral-50);
-
-  --secondary: var(--green-600);
-  --secondary-foreground: var(--neutral-50);
-
-  --accent: var(--gold-500);
-  --accent-foreground: var(--neutral-900);
-
-  --destructive: #ef4444;
-  --destructive-foreground: var(--neutral-50);
-
-  /* Custom (non-shadcn) */
-  --success: var(--green-400);
-  --success-foreground: var(--neutral-900);
-
-  /* Optionnel mais utile (arrondis cohérents UI) */
-  --radius: 14px;
 }
 
-/* -----------------------------
-   Dark mode (next-themes ajoute class="dark" sur <html>)
------------------------------- */
-.dark {
-  --background: var(--neutral-900);
-  --foreground: #F5F5F4;
-
-  --card: var(--neutral-800);
-  --card-foreground: #F5F5F4;
-
-  --popover: var(--neutral-800);
-  --popover-foreground: #F5F5F4;
-
-  --muted: var(--neutral-700);
-  --muted-foreground: rgba(245, 245, 244, 0.7);
-
-  --border: rgba(245, 245, 244, 0.12);
-  --input: rgba(245, 245, 244, 0.16);
-  --ring: rgba(198, 168, 90, 0.55);
-
-  --primary: var(--green-500);
-  --primary-foreground: var(--neutral-50);
-
-  --secondary: var(--green-600);
-  --secondary-foreground: var(--neutral-50);
-
-  --accent: var(--gold-500);
-  --accent-foreground: var(--neutral-900);
-
-  --success: var(--green-400);
-  --success-foreground: var(--neutral-900);
-
-  --destructive: #ef4444;
-  --destructive-foreground: var(--neutral-50);
-}
-
-/* -----------------------------
-   Tailwind v4 theme mapping
-   (permet d'utiliser bg-background, text-foreground, etc.)
------------------------------- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-
+  --color-site: var(--site);
+  --color-site-muted: var(--site-muted);
+  --color-ink: var(--ink);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
   --radius: var(--radius);
-
   --font-sans: var(--var-font-sans);
-  --font-title: var(--var-font-title);
 }
 
-/* -----------------------------
-   Base styles
------------------------------- */
+* {
+  box-sizing: border-box;
+}
+
 html,
 body {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  margin: 0;
+  background: var(--site);
+  color: var(--site-foreground);
   font-family: var(--var-font-sans);
 }
 
@@ -175,29 +84,235 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--var-font-title);
+  letter-spacing: 0;
 }
 
-/* Subtle drifting background for space effect */
-@keyframes space-drift {
-  0% {
-    background-position: 50% 50%;
+::selection {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.bg-site {
+  background-color: var(--site);
+}
+
+.text-site {
+  color: var(--site-foreground);
+}
+
+.text-site-muted {
+  color: var(--site-muted);
+}
+
+.border-site {
+  border-color: var(--site-border);
+}
+
+.surface {
+  background: var(--site-panel);
+  border: 1px solid var(--site-border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 60px rgba(18, 18, 18, 0.06);
+}
+
+.surface-dark {
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  color: #ffffff;
+}
+
+.fp-container {
+  margin: 0 auto;
+  max-width: 80rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.fp-panel {
+  background: var(--site-panel);
+  border: 1px solid var(--site-border);
+  border-radius: var(--radius);
+}
+
+.fp-icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--brand-soft) 64%, white);
+  border: 1px solid var(--site-border);
+  color: var(--ink);
+  display: inline-flex;
+  height: 2.75rem;
+  justify-content: center;
+  width: 2.75rem;
+}
+
+.form-input {
+  background: #fffdf8;
+  border: 1px solid var(--site-border);
+  border-radius: var(--radius);
+  color: var(--site-foreground);
+  font-size: 0.875rem;
+  outline: none;
+  padding: 0.75rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  width: 100%;
+}
+
+.form-input:focus {
+  border-color: rgba(18, 18, 18, 0.38);
+  box-shadow: 0 0 0 4px rgba(154, 120, 77, 0.14);
+}
+
+.form-message {
+  border-radius: var(--radius);
+  border: 1px solid var(--site-border);
+  font-size: 0.875rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.nav-link {
+  border-radius: 0;
+  color: var(--site-muted);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 0.55rem 0;
+  transition: color 160ms ease, opacity 160ms ease;
+}
+
+.nav-link:hover {
+  color: var(--site-foreground);
+}
+
+.nav-link-overlay {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.nav-link-overlay:hover {
+  color: #ffffff;
+}
+
+.admin-button,
+.btn-primary,
+.btn-secondary,
+.icon-button {
+  align-items: center;
+  border-radius: var(--radius);
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 700;
+  gap: 0.5rem;
+  min-height: 2.6rem;
+  padding: 0 1rem;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.icon-button {
+  background: var(--site-panel);
+  border: 1px solid var(--site-border);
+  color: var(--site-muted);
+  height: 2.6rem;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0;
+  width: 2.6rem;
+}
+
+.admin-button-solid,
+.btn-primary {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.admin-button-overlay {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: var(--site-panel);
+  border: 1px solid var(--site-border);
+  color: var(--site-foreground);
+}
+
+.admin-button-solid:hover,
+.btn-primary:hover {
+  background: var(--brand);
+}
+
+.admin-button-overlay:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #080914;
+}
+
+.btn-secondary:hover {
+  border-color: rgba(18, 18, 18, 0.3);
+  color: var(--brand);
+}
+
+.icon-button:hover {
+  border-color: rgba(18, 18, 18, 0.3);
+  color: var(--site-foreground);
+}
+
+.hero-link {
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: var(--radius);
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 800;
+  gap: 0.6rem;
+  letter-spacing: 0.2em;
+  min-height: 3rem;
+  padding: 0 1rem;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.hero-link:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #080914;
+}
+
+.eyebrow {
+  color: var(--brand);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.page-section {
+  margin: 0 auto;
+  max-width: 80rem;
+  padding: 4rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .fp-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
-  50% {
-    background-position: 55% 45%;
-  }
-  100% {
-    background-position: 50% 50%;
+
+  .page-section {
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
 }
 
-.space-drift {
-  background-position: 50% 50%;
-  animation: space-drift 28s ease-in-out infinite;
-  will-change: background-position;
-}
+@media (min-width: 1024px) {
+  .fp-container {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
 
-.btn-tab--active {
-  border: var(--border);
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.103);
+  .page-section {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
 }

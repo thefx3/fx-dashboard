@@ -5,8 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 export const getViewerServer = cache(async () => {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.auth.getUser();
-  if (error) return { user: null };
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) return { unavailable: false, user: null };
 
-  return { user: data.user };
+    return { unavailable: false, user: data.user };
+  } catch (error) {
+    console.error("Supabase auth is unavailable", error);
+    return { unavailable: true, user: null };
+  }
 });
