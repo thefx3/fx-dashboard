@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  HeartPulse,
   Plus,
   Target,
   X,
@@ -128,6 +129,7 @@ const countryOptions = [
   { label: "South Africa", region: "Africa", timezone: "Africa/Johannesburg" },
 ];
 const monthOptions = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthInitials = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 const accountSizes = ["25000", "50000", "100000", "150000"];
 const riskPercents = ["0.5", "1", "2", "3", "4", "5", "10"];
 const instrumentGroups = [
@@ -343,20 +345,14 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         <SelfCareOverviewPanel snapshot={snapshot} today={today} />
       </section>
 
-      <section className="surface p-6 sm:p-8">
-        <div>
-          <p className="eyebrow">Stats</p>
-          <h2 className="mt-2 text-2xl font-semibold">This week</h2>
-        </div>
-        <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
-          <Metric label="Total green" value={periodStats.green} />
-          <Metric label="Total red" value={periodStats.red} tone="red" />
-          <Metric label="Ratio" value={periodStats.ratio} tone={periodStats.ratio < 0 ? "red" : "green"} />
-          <Metric label="Clean streak" value={periodStats.cleanDays} />
-          <Metric label="Avg green/day" value={periodStats.avgGreenPerDay.toFixed(1)} />
-          <Metric label="Avg red/day" value={periodStats.avgRedPerDay.toFixed(1)} tone="red" />
-          <Metric label="Avg ratio/day" value={periodStats.avgRatioPerDay.toFixed(1)} />
-        </div>
+      <section className="grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
+        <Metric label="Total green" value={periodStats.green} />
+        <Metric label="Total red" value={periodStats.red} tone="red" />
+        <Metric label="Ratio" value={periodStats.ratio} tone={periodStats.ratio < 0 ? "red" : "green"} />
+        <Metric label="Clean streak" value={periodStats.cleanDays} />
+        <Metric label="Avg green/day" value={periodStats.avgGreenPerDay.toFixed(1)} />
+        <Metric label="Avg red/day" value={periodStats.avgRedPerDay.toFixed(1)} tone="red" />
+        <Metric label="Avg ratio/day" value={periodStats.avgRatioPerDay.toFixed(1)} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -473,7 +469,7 @@ function OverviewQuestsPanel({
           <Target className="h-5 w-5" />
         </span>
       </div>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-5 grid gap-1.5">
         {activeQuests.length ? (
           activeQuests.map((quest) => (
             <QuestResultRow
@@ -537,27 +533,27 @@ function StatsWorkspace({
           </button>
         </div>
       </section>
-      <section className="surface p-6 sm:p-8">
-        <p className="eyebrow">Self-care</p>
-        <h2 className="mt-2 text-2xl font-semibold">Period averages</h2>
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric label="Avg sleep" value={`${summary.selfCare.avgSleepHours.toFixed(1)}h`} />
-          <Metric label="Avg screen time" value={`${summary.selfCare.avgScreenHours.toFixed(1)}h`} tone={summary.selfCare.avgScreenHours > snapshot.profile.screenTimeRedMinutes / 60 ? "red" : "green"} />
-          <Metric label="Avg run" value={`${summary.selfCare.avgRunKm.toFixed(1)} km`} />
-          <Metric label="Avg calories" value={`${Math.round(summary.selfCare.avgCalories)} kcal`} />
+      <section className="grid gap-4 xl:grid-cols-2">
+        <div className="surface p-6 sm:p-8">
+          <p className="eyebrow">Status</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <Metric label="Total green" value={periodStats.green} />
+            <Metric label="Total red" value={periodStats.red} tone="red" />
+            <Metric label="Ratio" value={periodStats.ratio} tone={periodStats.ratio < 0 ? "red" : "green"} />
+            <Metric label="Clean streak" value={periodStats.cleanDays} />
+            <Metric label="Avg green/day" value={periodStats.avgGreenPerDay.toFixed(1)} />
+            <Metric label="Avg red/day" value={periodStats.avgRedPerDay.toFixed(1)} tone="red" />
+            <Metric label="Avg ratio/day" value={periodStats.avgRatioPerDay.toFixed(1)} />
+          </div>
         </div>
-      </section>
-      <section className="surface p-6 sm:p-8">
-        <p className="eyebrow">Status</p>
-        <h2 className="mt-2 text-2xl font-semibold">Green and red</h2>
-        <div className="mt-5 grid gap-2 md:grid-cols-4 xl:grid-cols-7">
-          <Metric label="Total green" value={periodStats.green} />
-          <Metric label="Total red" value={periodStats.red} tone="red" />
-          <Metric label="Ratio" value={periodStats.ratio} tone={periodStats.ratio < 0 ? "red" : "green"} />
-          <Metric label="Clean streak" value={periodStats.cleanDays} />
-          <Metric label="Avg green/day" value={periodStats.avgGreenPerDay.toFixed(1)} />
-          <Metric label="Avg red/day" value={periodStats.avgRedPerDay.toFixed(1)} tone="red" />
-          <Metric label="Avg ratio/day" value={periodStats.avgRatioPerDay.toFixed(1)} />
+        <div className="surface p-6 sm:p-8">
+          <p className="eyebrow">Self-care</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <Metric label="Avg sleep" value={`${summary.selfCare.avgSleepHours.toFixed(1)}h`} />
+            <Metric label="Avg screen time" value={`${summary.selfCare.avgScreenHours.toFixed(1)}h`} tone={summary.selfCare.avgScreenHours > snapshot.profile.screenTimeRedMinutes / 60 ? "red" : "green"} />
+            <Metric label="Avg run" value={`${summary.selfCare.avgRunKm.toFixed(1)} km`} />
+            <Metric label="Avg calories" value={`${Math.round(summary.selfCare.avgCalories)} kcal`} />
+          </div>
         </div>
       </section>
       <section className="grid gap-4 xl:grid-cols-2">
@@ -631,13 +627,23 @@ type ChartSeries = {
 };
 
 function SourceMetric({ green, red, title }: { green: number; red: number; title: string }) {
+  const ratio = green - red;
+  const items = [
+    { label: "Green", tone: "green" as const, value: green },
+    { label: "Red", tone: "red" as const, value: red },
+    { label: "Ratio", tone: ratio < 0 ? "red" as const : "green" as const, value: ratio },
+  ];
+
   return (
-    <div className="fp-panel p-4">
+    <div>
       <p className="text-sm font-semibold">{title}</p>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <SmallStat label="Green" value={green} tone="green" />
-        <SmallStat label="Red" value={red} tone="red" />
-        <SmallStat label="Ratio" value={green - red} tone={green - red < 0 ? "red" : "green"} />
+      <div className="mt-3 grid grid-cols-3 gap-0">
+        {items.map((item, index) => (
+          <div key={item.label} className={cn("border border-site bg-card p-3", index > 0 && "-ml-px")}>
+            <p className={cn("text-lg font-semibold", item.tone === "green" && "text-emerald-700", item.tone === "red" && "text-red-700")}>{item.value}</p>
+            <p className="mt-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-site-muted">{item.label}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -654,13 +660,13 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 
 function StatsChartCard({ eyebrow, points, series, title }: { eyebrow: string; points: ChartPoint[]; series: ChartSeries[]; title: string }) {
   return (
-    <section className="surface p-6 sm:p-8">
+    <section className="surface p-5 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{eyebrow}</p>
-          <h2 className="mt-2 text-2xl font-semibold">{title}</h2>
+          <h2 className="mt-2 text-xl font-semibold">{title}</h2>
         </div>
-        <div className="flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.12em] text-site-muted">
+        <div className="flex flex-wrap gap-3 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-site-muted">
           {series.map((item) => <LegendDot key={item.key} color={item.color} label={item.label} />)}
         </div>
       </div>
@@ -671,8 +677,8 @@ function StatsChartCard({ eyebrow, points, series, title }: { eyebrow: string; p
 
 function StatsTrendChart({ points, series }: { points: ChartPoint[]; series: ChartSeries[] }) {
   const width = 760;
-  const height = 260;
-  const padding = 28;
+  const height = 180;
+  const padding = 22;
   const values = points.flatMap((point) => series.map((item) => numericChartValue(point[item.key])));
   const minValue = Math.min(0, ...values);
   const maxValue = Math.max(1, ...values);
@@ -682,19 +688,19 @@ function StatsTrendChart({ points, series }: { points: ChartPoint[]; series: Cha
   const line = (key: string) => points.map((point, index) => `${x(index)},${y(numericChartValue(point[key]))}`).join(" ");
 
   return (
-    <div className="mt-5 overflow-hidden border border-site bg-site p-3">
+    <div className="mt-4 overflow-hidden border border-site bg-site p-3">
       <svg className="h-auto w-full" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Stats curve">
         <line x1={padding} x2={width - padding} y1={y(0)} y2={y(0)} stroke="rgba(28,28,27,0.18)" />
         {series.map((item) => (
-          <polyline key={item.key} points={line(item.key)} fill="none" stroke={item.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+          <polyline key={item.key} points={line(item.key)} fill="none" stroke={item.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
         ))}
         {points.map((point, index) => series.map((item) => (
-          <circle key={`${point.label}-${item.key}`} cx={x(index)} cy={y(numericChartValue(point[item.key]))} fill={item.color} r="4" />
+          <circle key={`${point.label}-${index}-${item.key}`} cx={x(index)} cy={y(numericChartValue(point[item.key]))} fill={item.color} r="2.5" />
         )))}
       </svg>
-      <div className="grid gap-2 border-t border-site pt-3 text-xs font-semibold uppercase tracking-[0.12em] text-site-muted sm:grid-cols-4">
-        {points.map((point) => (
-          <span key={point.label} className="truncate">{point.label}</span>
+      <div className="grid gap-2 border-t border-site pt-3 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-site-muted sm:grid-cols-4 md:grid-cols-7">
+        {points.map((point, index) => (
+          <span key={`${point.label}-${index}`} className="truncate">{point.label}</span>
         ))}
       </div>
     </div>
@@ -815,35 +821,77 @@ function buildSelfCareTrend(snapshot: FpairSnapshot, from: string, to: string, r
 function buildBuckets(from: string, to: string, range: StatsRange) {
   const dates = enumerateDates(from, to);
   if (range === "daily") {
-    return [{ from, label: formatShortDate(from), to }];
+    const weekdayLabels = ["M", "T", "W", "T", "F", "S", "S"];
+    return dates.slice(0, 7).map((date, index) => ({ from: date, label: weekdayLabels[index] ?? formatWeekday(date).slice(0, 1), to: date }));
   }
 
-  if (range === "yearly") {
+  if (range === "weekly") {
+    return chunkDatesIntoCount(dates, 4).map((bucket, index) => ({
+      from: bucket[0],
+      label: `W${index + 1}`,
+      to: bucket[bucket.length - 1],
+    }));
+  }
+
+  if (range === "monthly") {
     return Array.from({ length: 12 }, (_, index) => {
       const year = Number(from.slice(0, 4));
       const date = new Date(year, index, 1);
       const start = toIsoDate(date);
       const end = toIsoDate(new Date(year, index + 1, 0));
-      return { from: start, label: monthOptions[index], to: end };
+      return { from: start, label: monthInitials[index], to: end };
     });
+  }
+
+  const fromYear = Number(from.slice(0, 4));
+  const toYear = Number(to.slice(0, 4));
+  return Array.from({ length: Math.max(1, toYear - fromYear + 1) }, (_, index) => {
+    const year = fromYear + index;
+    return { from: `${year}-01-01`, label: String(year), to: `${year}-12-31` };
+  });
+}
+
+function chunkDatesIntoCount(dates: string[], count: number) {
+  if (!dates.length) return [];
+  return Array.from({ length: count }, (_, index) => {
+    const start = Math.floor((index * dates.length) / count);
+    const end = Math.floor(((index + 1) * dates.length) / count);
+    const bucket = dates.slice(start, Math.max(start + 1, end));
+    return bucket.length ? bucket : [dates[dates.length - 1]];
+  });
+}
+
+function getPeriod(date: string, range: StatsRange) {
+  const parsed = new Date(`${date}T00:00:00`);
+
+  if (range === "daily") {
+    const mondayOffset = (parsed.getDay() + 6) % 7;
+    parsed.setDate(parsed.getDate() - mondayOffset);
+    return { from: toIsoDate(parsed), to: shiftDate(toIsoDate(parsed), 6) };
+  }
+
+  if (range === "weekly") {
+    const from = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-01`;
+    const to = toIsoDate(new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0));
+    return { from, to };
   }
 
   if (range === "monthly") {
-    const bucketSize = Math.max(1, Math.ceil(dates.length / 6));
-    return chunkDates(dates, bucketSize).map((bucket) => {
-      return { from: bucket[0], label: `${bucket[0].slice(8)}-${bucket[bucket.length - 1].slice(8)}`, to: bucket[bucket.length - 1] };
-    });
+    const year = parsed.getFullYear();
+    return { from: `${year}-01-01`, to: `${year}-12-31` };
   }
 
-  return dates.map((date) => ({ from: date, label: formatWeekday(date), to: date }));
+  const year = parsed.getFullYear();
+  return { from: `${year - 4}-01-01`, to: `${year}-12-31` };
 }
 
-function chunkDates(dates: string[], size: number) {
-  const chunks: string[][] = [];
-  for (let index = 0; index < dates.length; index += size) {
-    chunks.push(dates.slice(index, index + size));
-  }
-  return chunks;
+function shiftPeriod(date: string, range: StatsRange, offset: number) {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (range === "daily") parsed.setDate(parsed.getDate() + offset * 7);
+  if (range === "weekly") parsed.setMonth(parsed.getMonth() + offset);
+  if (range === "monthly") parsed.setFullYear(parsed.getFullYear() + offset);
+  if (range === "yearly") parsed.setFullYear(parsed.getFullYear() + offset * 5);
+  return toIsoDate(parsed);
 }
 
 function QuestsWorkspace({
@@ -1796,7 +1844,7 @@ function SelfCareOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot; t
           <p className="eyebrow">Self-care</p>
         </div>
         <span className="fp-icon">
-          <Check className="h-5 w-5" />
+          <HeartPulse className="h-5 w-5" />
         </span>
       </div>
       <div className="mt-5 grid gap-2 text-sm">
@@ -1992,24 +2040,6 @@ function EmptyState({ text }: { text: string }) {
   return <div className="border border-dashed border-site bg-site p-4 text-sm text-site-muted">{text}</div>;
 }
 
-function getPeriod(date: string, range: StatsRange) {
-  if (range === "daily") return { from: date, to: date };
-  if (range === "weekly") {
-    const parsed = new Date(`${date}T00:00:00`);
-    const mondayOffset = (parsed.getDay() + 6) % 7;
-    parsed.setDate(parsed.getDate() - mondayOffset);
-    return { from: toIsoDate(parsed), to: shiftDate(toIsoDate(parsed), 6) };
-  }
-  if (range === "monthly") {
-    const parsed = new Date(`${date}T00:00:00`);
-    const from = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-01`;
-    const to = toIsoDate(new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0));
-    return { from, to };
-  }
-  const year = new Date(`${date}T00:00:00`).getFullYear();
-  return { from: `${year}-01-01`, to: `${year}-12-31` };
-}
-
 function matchesAccountFilter(account: Account, filter: AccountFilter) {
   if (filter === "all") return true;
   if (filter === "active") return !isBlownPhase(account.phase);
@@ -2078,15 +2108,6 @@ function getSimulationDate(year: number, month: number) {
   const today = new Date();
   const day = Math.min(today.getDate(), new Date(year, month + 1, 0).getDate());
   return new Date(year, month, day, 12, 0, 0);
-}
-
-function shiftPeriod(date: string, range: StatsRange, offset: number) {
-  const parsed = new Date(`${date}T00:00:00`);
-  if (range === "daily") parsed.setDate(parsed.getDate() + offset);
-  if (range === "weekly") parsed.setDate(parsed.getDate() + offset * 7);
-  if (range === "monthly") parsed.setMonth(parsed.getMonth() + offset);
-  if (range === "yearly") parsed.setFullYear(parsed.getFullYear() + offset);
-  return toIsoDate(parsed);
 }
 
 function shiftDate(date: string, offset: number) {
