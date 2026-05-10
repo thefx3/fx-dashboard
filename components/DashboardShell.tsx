@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import DashboardFpairWorkspace from "@/components/DashboardFpairWorkspace";
-import DashboardJournal from "@/components/DashboardJournal";
 import DashboardLogoutButton from "@/components/DashboardLogoutButton";
 import DayCounter from "@/components/DayCounter";
 import JournalDataReset from "@/components/JournalDataReset";
@@ -26,11 +25,10 @@ import type { DashboardMetric } from "@/lib/dashboard-metrics";
 
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: Home, view: "overview" },
-  { label: "Quests", href: "/dashboard/quests", icon: Target, view: "quests" },
   { label: "Journal", href: "/dashboard/journal", icon: NotebookPen, view: "journal" },
-  { label: "Stats", href: "/dashboard/stats", icon: BarChart3, view: "stats" },
-  { label: "My Lists", href: "/dashboard/lists", icon: ListChecks, view: "lists" },
   { label: "Trades", href: "/dashboard/trades", icon: CandlestickChart, view: "trades" },
+  { label: "My Lists", href: "/dashboard/lists", icon: ListChecks, view: "lists" },
+  { label: "Stats", href: "/dashboard/stats", icon: BarChart3, view: "stats" },
   { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, view: "calendar" },
 ];
 
@@ -38,7 +36,7 @@ type DashboardShellProps = {
   email: string;
   metrics: DashboardMetric[];
   isLive: boolean;
-  view?: "overview" | "settings" | "journal" | "trades" | "calendar" | "stats" | "quests" | "lists";
+  view?: "overview" | "settings" | "journal" | "trades" | "calendar" | "stats" | "lists";
   journalDate?: string;
 };
 
@@ -53,7 +51,6 @@ export default function DashboardShell({
   const isTrades = view === "trades";
   const isCalendar = view === "calendar";
   const isStats = view === "stats";
-  const isQuests = view === "quests";
   const isLists = view === "lists";
 
   return (
@@ -92,8 +89,6 @@ export default function DashboardShell({
             <DashboardFpairWorkspace initialDate={journalDate ?? today} mode="calendar" today={today} />
           ) : isStats ? (
             <DashboardFpairWorkspace initialDate={journalDate ?? today} mode="stats" today={today} />
-          ) : isQuests ? (
-            <DashboardFpairWorkspace mode="quests" today={today} />
           ) : isLists ? (
             <DashboardFpairWorkspace mode="lists" today={today} />
           ) : (
@@ -112,7 +107,7 @@ function JournalView({
   selectedDate: string;
   today: string;
 }) {
-  return <DashboardJournal today={today} selectedDate={selectedDate} />;
+  return <DashboardFpairWorkspace initialDate={selectedDate} mode="journal" today={today} />;
 }
 
 function OverviewView({ today }: { today: string }) {

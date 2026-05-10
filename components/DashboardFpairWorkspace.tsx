@@ -11,7 +11,21 @@ import {
   Target,
   X,
 } from "lucide-react";
+import {
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { cn } from "@/lib/cn";
+import DashboardJournal from "@/components/DashboardJournal";
 import { getTodayIsoDate, toIsoDate } from "@/lib/date";
 import { emptyEntry, getCurrentUserId, saveJournalEntry } from "@/lib/dashboard-data";
 import {
@@ -53,7 +67,7 @@ import {
 } from "@/lib/fpair-data";
 
 type StatsRange = "daily" | "weekly" | "monthly" | "yearly";
-type WorkspaceMode = "overview" | "trades" | "calendar" | "stats" | "quests" | "lists";
+type WorkspaceMode = "overview" | "journal" | "trades" | "calendar" | "stats" | "lists";
 type TradesSubTab = "trades" | "accounts" | "session-risk";
 type CalendarSubTab = "history" | "planned";
 
@@ -270,6 +284,20 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
     );
   }
 
+  if (mode === "journal") {
+    return shell(
+      <JournalQuestsWorkspace
+        activeQuests={activeQuests}
+        onDeleteQuest={(questId) => runSync(() => deleteQuest(userId!, questId))}
+        onSaveQuest={(quest) => runSync(() => saveQuest(userId!, quest))}
+        onSaveResult={(questId, status, value) => runSync(() => saveQuestResult(userId!, selectedDate, questId, status, value))}
+        selectedDate={selectedDate}
+        snapshot={snapshot}
+        today={today}
+      />,
+    );
+  }
+
   if (mode === "stats") {
     return shell(
       <StatsWorkspace
@@ -279,19 +307,6 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         periodStats={periodStats}
         range={statsRange}
         selectedDate={selectedDate}
-        snapshot={snapshot}
-      />,
-    );
-  }
-
-  if (mode === "quests") {
-    return shell(
-      <QuestsWorkspace
-        activeQuests={getActiveQuests(snapshot.quests, today)}
-        onDeleteQuest={(questId) => runSync(() => deleteQuest(userId!, questId))}
-        onSaveQuest={(quest) => runSync(() => saveQuest(userId!, quest))}
-        onSaveResult={(questId, status, value) => runSync(() => saveQuestResult(userId!, today, questId, status, value))}
-        selectedDate={today}
         snapshot={snapshot}
       />,
     );
@@ -332,9 +347,9 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
           </div>
         </div>
 
-        <div className="surface p-6 sm:p-8">
+        <div className="surface flex min-h-[260px] flex-col p-6 sm:p-8">
           <p className="eyebrow">Today</p>
-          <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="mt-auto grid grid-cols-2 gap-3">
             <SmallStat label="Green" value={breakdown.green} tone="green" />
             <SmallStat label="Red" value={breakdown.red} tone="red" />
             <SmallStat label="Ratio" value={breakdown.score} tone={breakdown.score < 0 ? "red" : "green"} />
@@ -559,11 +574,10 @@ function StatsWorkspace({
       <section className="grid gap-4 xl:grid-cols-2">
         <div className="surface p-6 sm:p-8">
           <p className="eyebrow">Sources</p>
-          <h2 className="mt-2 text-2xl font-semibold">Journal, quests and self-care</h2>
           <div className="mt-5 grid gap-2 sm:grid-cols-3">
-            <SourceMetric title="Journal" green={summary.sources.journal.green} red={summary.sources.journal.red} />
-            <SourceMetric title="Quests" green={summary.sources.quests.green} red={summary.sources.quests.red} />
-            <SourceMetric title="Self-care" green={summary.sources.selfCare.green} red={summary.sources.selfCare.red} />
+            <SourcePieChart title="Journal" green={summary.sources.journal.green} red={summary.sources.journal.red} />
+            <SourcePieChart title="Quests" green={summary.sources.quests.green} red={summary.sources.quests.red} />
+            <SourcePieChart title="Self-care" green={summary.sources.selfCare.green} red={summary.sources.selfCare.red} />
           </div>
         </div>
         <div className="surface p-6 sm:p-8">
@@ -626,24 +640,47 @@ type ChartSeries = {
   label: string;
 };
 
-function SourceMetric({ green, red, title }: { green: number; red: number; title: string }) {
+function SourcePieChart({ green, red, title }: { green: number; red: number; title: string }) {
   const ratio = green - red;
-  const items = [
-    { label: "Green", tone: "green" as const, value: green },
-    { label: "Red", tone: "red" as const, value: red },
-    { label: "Ratio", tone: ratio < 0 ? "red" as const : "green" as const, value: ratio },
-  ];
+  const hasData = green + red > 0;
+  const data = hasData
+    ? [
+        { color: "#047857", name: "Green", value: green },
+        { color: "#b91c1c", name: "Red", value: red },
+      ]
+    : [{ color: "rgba(28,28,27,0.16)", name: "No data", value: 1 }];
 
   return (
-    <div>
-      <p className="text-sm font-semibold">{title}</p>
-      <div className="mt-3 grid grid-cols-3 gap-0">
-        {items.map((item, index) => (
-          <div key={item.label} className={cn("border border-site bg-card p-3", index > 0 && "-ml-px")}>
-            <p className={cn("text-lg font-semibold", item.tone === "green" && "text-emerald-700", item.tone === "red" && "text-red-700")}>{item.value}</p>
-            <p className="mt-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-site-muted">{item.label}</p>
-          </div>
-        ))}
+    <div className="bg-site p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">{title}</p>
+          <p className={cn("mt-1 text-xs font-semibold uppercase tracking-[0.12em]", ratio < 0 ? "text-red-700" : "text-emerald-700")}>
+            Ratio {ratio}
+          </p>
+        </div>
+        <div className="text-right text-xs font-semibold text-site-muted">
+          <p><span className="text-emerald-700">{green}</span> green</p>
+          <p><span className="text-red-700">{red}</span> red</p>
+        </div>
+      </div>
+      <div className="mt-3 h-36">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={data} dataKey="value" innerRadius="58%" outerRadius="84%" paddingAngle={hasData ? 2 : 0} stroke="none">
+              {data.map((item) => <Cell key={item.name} fill={item.color} />)}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                background: "rgb(250,248,244)",
+                border: "1px solid rgba(28,28,27,0.16)",
+                borderRadius: 0,
+                color: "rgb(28,28,27)",
+                fontSize: 12,
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
@@ -676,33 +713,67 @@ function StatsChartCard({ eyebrow, points, series, title }: { eyebrow: string; p
 }
 
 function StatsTrendChart({ points, series }: { points: ChartPoint[]; series: ChartSeries[] }) {
-  const width = 760;
-  const height = 180;
-  const padding = 22;
+  const chartData = points.map((point, index) => ({ ...point, xKey: String(index), xLabel: point.label }));
   const values = points.flatMap((point) => series.map((item) => numericChartValue(point[item.key])));
   const minValue = Math.min(0, ...values);
   const maxValue = Math.max(1, ...values);
-  const range = Math.max(1, maxValue - minValue);
-  const x = (index: number) => padding + (points.length <= 1 ? 0 : (index * (width - padding * 2)) / (points.length - 1));
-  const y = (value: number) => height - padding - ((value - minValue) / range) * (height - padding * 2);
-  const line = (key: string) => points.map((point, index) => `${x(index)},${y(numericChartValue(point[key]))}`).join(" ");
+  const padding = Math.max(1, (maxValue - minValue) * 0.12);
+  const domain: [number, number] = [minValue - padding, maxValue + padding];
 
   return (
-    <div className="mt-4 overflow-hidden border border-site bg-site p-3">
-      <svg className="h-auto w-full" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Stats curve">
-        <line x1={padding} x2={width - padding} y1={y(0)} y2={y(0)} stroke="rgba(28,28,27,0.18)" />
-        {series.map((item) => (
-          <polyline key={item.key} points={line(item.key)} fill="none" stroke={item.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-        ))}
-        {points.map((point, index) => series.map((item) => (
-          <circle key={`${point.label}-${index}-${item.key}`} cx={x(index)} cy={y(numericChartValue(point[item.key]))} fill={item.color} r="2.5" />
-        )))}
-      </svg>
-      <div className="grid gap-2 border-t border-site pt-3 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-site-muted sm:grid-cols-4 md:grid-cols-7">
-        {points.map((point, index) => (
-          <span key={`${point.label}-${index}`} className="truncate">{point.label}</span>
-        ))}
-      </div>
+    <div className="mt-4 h-[250px] overflow-hidden border border-site bg-site px-2 py-3">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData} margin={{ bottom: 12, left: 0, right: 10, top: 10 }}>
+          <CartesianGrid stroke="rgba(28,28,27,0.08)" vertical={false} />
+          <ReferenceLine y={0} stroke="rgba(28,28,27,0.2)" strokeWidth={1} />
+          <XAxis
+            axisLine={{ stroke: "rgba(28,28,27,0.14)" }}
+            dataKey="xKey"
+            interval={0}
+            minTickGap={0}
+            padding={{ left: 0, right: 0 }}
+            tick={{ fill: "rgb(87,82,74)", fontSize: 10, fontWeight: 700 }}
+            tickFormatter={(value) => chartData[Number(value)]?.xLabel ?? String(value)}
+            tickLine={false}
+            tickMargin={10}
+          />
+          <YAxis
+            axisLine={false}
+            domain={domain}
+            tick={{ fill: "rgb(120,113,103)", fontSize: 10 }}
+            tickLine={false}
+            tickMargin={8}
+            width={34}
+          />
+          <Tooltip
+            cursor={{ stroke: "rgba(28,28,27,0.16)", strokeWidth: 1 }}
+            labelFormatter={(value) => chartData[Number(value)]?.xLabel ?? String(value)}
+            contentStyle={{
+              background: "rgb(250,248,244)",
+              border: "1px solid rgba(28,28,27,0.16)",
+              borderRadius: 0,
+              boxShadow: "0 14px 40px rgba(28,28,27,0.08)",
+              color: "rgb(28,28,27)",
+              fontSize: 12,
+            }}
+          />
+          {series.map((item) => (
+            <Line
+              key={item.key}
+              activeDot={{ r: 4, strokeWidth: 0 }}
+              dataKey={item.key}
+              dot={{ r: 2, strokeWidth: 0 }}
+              isAnimationActive={false}
+              name={item.label}
+              stroke={item.color}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              type="monotone"
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -882,7 +953,7 @@ function getPeriod(date: string, range: StatsRange) {
   }
 
   const year = parsed.getFullYear();
-  return { from: `${year - 4}-01-01`, to: `${year}-12-31` };
+  return { from: `${year - 5}-01-01`, to: `${year - 1}-12-31` };
 }
 
 function shiftPeriod(date: string, range: StatsRange, offset: number) {
@@ -894,13 +965,16 @@ function shiftPeriod(date: string, range: StatsRange, offset: number) {
   return toIsoDate(parsed);
 }
 
-function QuestsWorkspace({
+type JournalFpairTab = "journal" | "diary" | "quests" | "library";
+
+function JournalQuestsWorkspace({
   activeQuests,
   onDeleteQuest,
   onSaveQuest,
   onSaveResult,
   selectedDate,
   snapshot,
+  today,
 }: {
   activeQuests: Quest[];
   onDeleteQuest: (questId: string) => void;
@@ -908,51 +982,92 @@ function QuestsWorkspace({
   onSaveResult: (questId: string, status: "open" | "completed" | "failed", value: number | null) => void;
   selectedDate: string;
   snapshot: FpairSnapshot;
+  today: string;
 }) {
-  const [tab, setTab] = useState<"today" | "library">("today");
-  const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
+  const [tab, setTab] = useState<JournalFpairTab>("journal");
+  const [diaryMode, setDiaryMode] = useState<"write" | "feed">("write");
 
   return (
     <div className="grid gap-4">
-      <section className="flex justify-start">
-        <Segmented items={[["today", "Today"], ["library", "Library"]]} value={tab} onChange={setTab} />
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented
+            items={[
+              ["journal", "Journal"],
+              ["diary", "Diary"],
+              ["quests", "Quests"],
+              ["library", "Library"],
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+          {tab === "diary" ? (
+            <Segmented items={[["write", "Write"], ["feed", "View"]]} value={diaryMode} onChange={setDiaryMode} />
+          ) : null}
+        </div>
+        <h2 className="text-xl font-semibold leading-tight sm:text-2xl">{formatLongDate(selectedDate)}</h2>
       </section>
-      {tab === "today" ? (
-        <section className="grid gap-4">
-          <OverviewQuestsPanel activeQuests={activeQuests} onSaveResult={onSaveResult} selectedDate={selectedDate} snapshot={snapshot} />
-        </section>
+
+      {tab === "journal" ? (
+        <DashboardJournal forcedTab="write" hideTabs selectedDate={selectedDate} today={today} />
+      ) : tab === "diary" ? (
+        <DashboardJournal forcedDiaryMode={diaryMode} forcedTab="diary" hideTabs selectedDate={selectedDate} today={today} />
+      ) : tab === "quests" ? (
+        <OverviewQuestsPanel activeQuests={activeQuests} onSaveResult={onSaveResult} selectedDate={selectedDate} snapshot={snapshot} />
       ) : (
-        <section className="grid gap-4 xl:grid-cols-[420px_1fr]">
-          <QuestForm key={editingQuest?.id ?? "new"} quest={editingQuest} onCancel={() => setEditingQuest(null)} onSave={(quest) => {
-            onSaveQuest(quest);
-            setEditingQuest(null);
-          }} />
-          <div className="surface p-6 sm:p-8">
-            <p className="eyebrow">Quests</p>
-            <h2 className="mt-2 text-2xl font-semibold">Library</h2>
-            <div className="mt-5 grid gap-2">
-              {snapshot.quests.length ? snapshot.quests.map((quest) => (
-                <div key={quest.id} className="grid gap-3 border border-site bg-site p-3 text-sm lg:grid-cols-[1fr_auto_auto_auto] lg:items-center">
-                  <span>
-                    <span className="font-semibold">{quest.title}</span>
-                    <span className="text-site-muted"> / {quest.category} / {quest.cadence} / {quest.condition}</span>
-                  </span>
-                  <button type="button" className="border border-site bg-card px-3 py-2 font-semibold text-site-muted transition hover:text-site" onClick={() => setEditingQuest(quest)}>
-                    Edit
-                  </button>
-                  <button type="button" className="border border-site bg-card px-3 py-2 font-semibold text-site-muted transition hover:text-site" onClick={() => onSaveQuest({ ...quest, active: !quest.active })}>
-                    {quest.active ? "Active" : "Paused"}
-                  </button>
-                  <button type="button" className="border border-red-200 bg-red-50 px-3 py-2 font-semibold text-red-700" onClick={() => onDeleteQuest(quest.id)}>
-                    Delete
-                  </button>
-                </div>
-              )) : <EmptyState text="No quest created yet." />}
-            </div>
-          </div>
-        </section>
+        <QuestLibraryPanel onDeleteQuest={onDeleteQuest} onSaveQuest={onSaveQuest} snapshot={snapshot} />
       )}
     </div>
+  );
+}
+
+function QuestLibraryPanel({
+  editingQuest: controlledEditingQuest,
+  onDeleteQuest,
+  onEditQuest,
+  onSaveQuest,
+  snapshot,
+}: {
+  editingQuest?: Quest | null;
+  onDeleteQuest: (questId: string) => void;
+  onEditQuest?: (quest: Quest | null) => void;
+  onSaveQuest: (quest: Quest) => void;
+  snapshot: FpairSnapshot;
+}) {
+  const [internalEditingQuest, setInternalEditingQuest] = useState<Quest | null>(null);
+  const editingQuest = controlledEditingQuest === undefined ? internalEditingQuest : controlledEditingQuest;
+  const setEditingQuest = onEditQuest ?? setInternalEditingQuest;
+
+  return (
+    <section className="grid gap-4 xl:grid-cols-[420px_1fr]">
+      <QuestForm key={editingQuest?.id ?? "new"} quest={editingQuest} onCancel={() => setEditingQuest(null)} onSave={(quest) => {
+        onSaveQuest(quest);
+        setEditingQuest(null);
+      }} />
+      <div className="surface p-6 sm:p-8">
+        <p className="eyebrow">Quests</p>
+        <h2 className="mt-2 text-2xl font-semibold">Library</h2>
+        <div className="mt-5 grid gap-2">
+          {snapshot.quests.length ? snapshot.quests.map((quest) => (
+            <div key={quest.id} className="grid gap-3 border border-site bg-site p-3 text-sm lg:grid-cols-[1fr_auto_auto_auto] lg:items-center">
+              <span>
+                <span className="font-semibold">{quest.title}</span>
+                <span className="text-site-muted"> / {quest.category} / {quest.cadence} / {quest.condition}</span>
+              </span>
+              <button type="button" className="border border-site bg-card px-3 py-2 font-semibold text-site-muted transition hover:text-site" onClick={() => setEditingQuest(quest)}>
+                Edit
+              </button>
+              <button type="button" className="border border-site bg-card px-3 py-2 font-semibold text-site-muted transition hover:text-site" onClick={() => onSaveQuest({ ...quest, active: !quest.active })}>
+                {quest.active ? "Active" : "Paused"}
+              </button>
+              <button type="button" className="border border-red-200 bg-red-50 px-3 py-2 font-semibold text-red-700" onClick={() => onDeleteQuest(quest.id)}>
+                Delete
+              </button>
+            </div>
+          )) : <EmptyState text="No quest created yet." />}
+        </div>
+      </div>
+    </section>
   );
 }
 

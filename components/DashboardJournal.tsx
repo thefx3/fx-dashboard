@@ -24,14 +24,20 @@ import {
 type JournalTab = "write" | "diary";
 
 export default function DashboardJournal({
+  forcedDiaryMode,
+  forcedTab,
+  hideTabs = false,
   today,
   selectedDate,
 }: {
+  forcedDiaryMode?: "write" | "feed";
+  forcedTab?: JournalTab;
+  hideTabs?: boolean;
   today: string;
   selectedDate: string;
 }) {
-  const [activeTab, setActiveTab] = useState<JournalTab>("write");
-  const [diaryMode, setDiaryMode] = useState<"write" | "feed">("write");
+  const [internalActiveTab, setInternalActiveTab] = useState<JournalTab>("write");
+  const [internalDiaryMode, setInternalDiaryMode] = useState<"write" | "feed">("write");
   const [newWant, setNewWant] = useState("");
   const [newActivity, setNewActivity] = useState("");
   const [newActivityStatus, setNewActivityStatus] =
@@ -47,6 +53,8 @@ export default function DashboardJournal({
   const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(Boolean(initialSnapshot));
   const [syncError, setSyncError] = useState<string | null>(null);
+  const activeTab = forcedTab ?? internalActiveTab;
+  const diaryMode = forcedDiaryMode ?? internalDiaryMode;
 
   const isPast = selectedDate < today;
   const isFuture = selectedDate > today;
@@ -203,24 +211,25 @@ export default function DashboardJournal({
           {syncError}
         </div>
       ) : null}
+      {!hideTabs ? (
       <section className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex border border-site bg-site p-1">
             <TabButton
               active={activeTab === "write"}
               label="Journal"
-              onClick={() => setActiveTab("write")}
+              onClick={() => setInternalActiveTab("write")}
             />
             <TabButton
               active={activeTab === "diary"}
               label="Diary"
-              onClick={() => setActiveTab("diary")}
+              onClick={() => setInternalActiveTab("diary")}
             />
           </div>
           {activeTab === "diary" ? (
             <div className="inline-flex border border-site bg-site p-1">
-              <TabButton active={diaryMode === "write"} label="Write" onClick={() => setDiaryMode("write")} />
-              <TabButton active={diaryMode === "feed"} label="View" onClick={() => setDiaryMode("feed")} />
+              <TabButton active={diaryMode === "write"} label="Write" onClick={() => setInternalDiaryMode("write")} />
+              <TabButton active={diaryMode === "feed"} label="View" onClick={() => setInternalDiaryMode("feed")} />
             </div>
           ) : null}
         </div>
@@ -233,6 +242,7 @@ export default function DashboardJournal({
           </span>
         </h2>
       </section>
+      ) : null}
 
       {activeTab === "write" ? (
         isPast ? (
