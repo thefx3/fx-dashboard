@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { getTodayIsoDate } from "@/lib/date";
 import {
   dashboardEvents,
   daysBetween,
@@ -905,9 +906,13 @@ function StatusButton({
   );
 }
 
-function countDay(entry: JournalEntry) {
+function countDay(entry: JournalEntry, date: string) {
   const plannedGreen = entry.wants.filter((task) => task.completed === true).length;
-  const plannedRed = entry.wants.filter((task) => task.completed === false).length;
+  const plannedRed =
+    entry.wants.filter((task) => task.completed === false).length +
+    (date < getTodayIsoDate()
+      ? entry.wants.filter((task) => task.completed === null).length
+      : 0);
 
   return {
     positive:
@@ -1095,7 +1100,7 @@ function buildProgress(
     const bucket = bucketMap.get(bucketKey);
     if (!bucket) continue;
 
-    const counts = countDay(entry);
+    const counts = countDay(entry, date);
     bucket.positive += counts.positive;
     bucket.negative += counts.negative;
     bucket.planned += entry.wants.length;

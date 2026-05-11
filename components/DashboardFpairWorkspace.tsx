@@ -67,9 +67,9 @@ import {
 } from "@/lib/fpair-data";
 
 type StatsRange = "daily" | "weekly" | "monthly" | "yearly";
-type WorkspaceMode = "overview" | "journal" | "trades" | "calendar" | "stats" | "lists";
+type StatsTab = "history" | StatsRange;
+type WorkspaceMode = "overview" | "journal" | "trades" | "stats" | "lists";
 type TradesSubTab = "trades" | "accounts" | "session-risk";
-type CalendarSubTab = "history" | "planned";
 
 const emptySnapshot: FpairSnapshot = {
   accounts: [],
@@ -168,6 +168,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   const [snapshot, setSnapshot] = useState<FpairSnapshot>(initialSnapshot ?? emptySnapshot);
   const [selectedDate, setSelectedDate] = useState(initialDate ?? today);
   const [statsRange, setStatsRange] = useState<StatsRange>("weekly");
+  const [statsTab, setStatsTab] = useState<StatsTab>(mode === "stats" ? "history" : "daily");
   const [loaded, setLoaded] = useState(Boolean(initialSnapshot));
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -185,8 +186,10 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   }, [userId]);
 
   useEffect(() => {
-    if (initialDate) setSelectedDate(initialDate);
-  }, [initialDate]);
+    if (!initialDate) return;
+    setSelectedDate(initialDate);
+    if (mode === "stats") setStatsTab("history");
+  }, [initialDate, mode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,12 +229,28 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
     return subscribeFpairChanges(userId, () => void reload(userId));
   }, [reload, userId]);
 
+  useEffect(() => {
+    if (mode !== "stats") return undefined;
+    const handler = (event: Event) => {
+      const date = (event as CustomEvent<string>).detail;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      setSelectedDate(date);
+      setStatsTab("history");
+    };
+    window.addEventListener("fpair:stats-history-date", handler);
+    return () => window.removeEventListener("fpair:stats-history-date", handler);
+  }, [mode]);
+
   const progress = useMemo(() => getLevelProgress(snapshot), [snapshot]);
   const breakdown = useMemo(() => getDayBreakdown(snapshot, selectedDate), [snapshot, selectedDate]);
   const activeQuests = useMemo(() => getActiveQuests(snapshot.quests, selectedDate), [snapshot.quests, selectedDate]);
   const tradingStats = useMemo(() => getTradingStats(snapshot), [snapshot]);
   const period = useMemo(() => getPeriod(selectedDate, statsRange), [selectedDate, statsRange]);
   const periodStats = useMemo(() => getStats(snapshot, period.from, period.to), [snapshot, period]);
+  const handleStatsTabChange = useCallback((nextTab: StatsTab) => {
+    setStatsTab(nextTab);
+    if (nextTab !== "history") setStatsRange(nextTab);
+  }, []);
 
   async function runSync(action: () => Promise<void>) {
     if (!userId) return;
@@ -265,21 +284,10 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         onSavePropFirm={(plan) => runSync(() => savePropFirmPlan(plan))}
         onSaveTrade={(trade) => runSync(() => saveTrade(userId!, trade))}
         propFirmPlans={snapshot.propFirmPlans}
+        selectedDate={selectedDate}
         stats={tradingStats}
         today={today}
         trades={snapshot.trades}
-      />,
-    );
-  }
-
-  if (mode === "calendar") {
-    return shell(
-      <CalendarWorkspace
-        activeQuests={activeQuests}
-        breakdown={breakdown}
-        selectedDate={selectedDate}
-        snapshot={snapshot}
-        today={today}
       />,
     );
   }
@@ -301,13 +309,16 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   if (mode === "stats") {
     return shell(
       <StatsWorkspace
-        onRangeChange={setStatsRange}
+        activeQuests={activeQuests}
+        breakdown={breakdown}
+        onTabChange={handleStatsTabChange}
         onSelectedDateChange={setSelectedDate}
         period={period}
         periodStats={periodStats}
         range={statsRange}
         selectedDate={selectedDate}
         snapshot={snapshot}
+        tab={statsTab}
       />,
     );
   }
@@ -318,6 +329,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         items={snapshot.lists}
         onDelete={(itemId) => runSync(() => deleteListItem(userId!, itemId))}
         onSave={(item) => runSync(() => saveListItem(userId!, item))}
+        selectedDate={selectedDate}
       />,
     );
   }
@@ -504,39 +516,69 @@ function OverviewQuestsPanel({
 }
 
 function StatsWorkspace({
-  onRangeChange,
+  activeQuests,
+  breakdown,
+  onTabChange,
   onSelectedDateChange,
   period,
   periodStats,
   range,
   selectedDate,
   snapshot,
+  tab,
 }: {
-  onRangeChange: (range: StatsRange) => void;
+  activeQuests: Quest[];
+  breakdown: ReturnType<typeof getDayBreakdown>;
+  onTabChange: (tab: StatsTab) => void;
   onSelectedDateChange: (date: string) => void;
   period: { from: string; to: string };
   periodStats: ReturnType<typeof getStats>;
   range: StatsRange;
   selectedDate: string;
   snapshot: FpairSnapshot;
+  tab: StatsTab;
 }) {
   const summary = useMemo(() => buildStatsSummary(snapshot, period.from, period.to), [period.from, period.to, snapshot]);
+  const statusStats = useMemo(() => getGroupedStats(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
   const ratioTrend = useMemo(() => buildStatusTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
   const pnlTrend = useMemo(() => buildPnlTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
   const selfCareTrend = useMemo(() => buildSelfCareTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
+  const periodUnit = getStatsUnit(range);
+
+  if (tab === "history") {
+    return (
+      <div className="grid gap-4">
+        <section className="flex flex-wrap items-center justify-between gap-3">
+          <Segmented
+            items={[
+              ["history", "History"],
+              ["daily", "Daily"],
+              ["weekly", "Weekly"],
+              ["monthly", "Monthly"],
+              ["yearly", "Yearly"],
+            ]}
+            value={tab}
+            onChange={onTabChange}
+          />
+        </section>
+        <CalendarHistoryDetail activeQuests={activeQuests} breakdown={breakdown} selectedDate={selectedDate} snapshot={snapshot} />
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4">
       <section className="flex flex-wrap items-center justify-between gap-3">
         <Segmented
           items={[
+            ["history", "History"],
             ["daily", "Daily"],
             ["weekly", "Weekly"],
             ["monthly", "Monthly"],
             ["yearly", "Yearly"],
           ]}
-          value={range}
-          onChange={onRangeChange}
+          value={tab}
+          onChange={onTabChange}
         />
         <div className="flex items-center gap-2">
           <button type="button" className="icon-button" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, -1))}>
@@ -555,10 +597,10 @@ function StatsWorkspace({
             <Metric label="Total green" value={periodStats.green} />
             <Metric label="Total red" value={periodStats.red} tone="red" />
             <Metric label="Ratio" value={periodStats.ratio} tone={periodStats.ratio < 0 ? "red" : "green"} />
-            <Metric label="Clean streak" value={periodStats.cleanDays} />
-            <Metric label="Avg green/day" value={periodStats.avgGreenPerDay.toFixed(1)} />
-            <Metric label="Avg red/day" value={periodStats.avgRedPerDay.toFixed(1)} tone="red" />
-            <Metric label="Avg ratio/day" value={periodStats.avgRatioPerDay.toFixed(1)} />
+            <Metric label="Clean streak" value={statusStats.cleanPeriods} />
+            <Metric label={`Avg green/${periodUnit}`} value={statusStats.avgGreen.toFixed(1)} />
+            <Metric label={`Avg red/${periodUnit}`} value={statusStats.avgRed.toFixed(1)} tone="red" />
+            <Metric label={`Avg ratio/${periodUnit}`} value={statusStats.avgRatio.toFixed(1)} />
           </div>
         </div>
         <div className="surface p-6 sm:p-8">
@@ -572,13 +614,10 @@ function StatsWorkspace({
         </div>
       </section>
       <section className="grid gap-4 xl:grid-cols-2">
-        <div className="surface p-6 sm:p-8">
-          <p className="eyebrow">Sources</p>
-          <div className="mt-5 grid gap-2 sm:grid-cols-3">
-            <SourcePieChart title="Journal" green={summary.sources.journal.green} red={summary.sources.journal.red} />
-            <SourcePieChart title="Quests" green={summary.sources.quests.green} red={summary.sources.quests.red} />
-            <SourcePieChart title="Self-care" green={summary.sources.selfCare.green} red={summary.sources.selfCare.red} />
-          </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <SourcePieChart title="Journal" green={summary.sources.journal.green} red={summary.sources.journal.red} />
+          <SourcePieChart title="Quests" green={summary.sources.quests.green} red={summary.sources.quests.red} />
+          <SourcePieChart title="Self-care" green={summary.sources.selfCare.green} red={summary.sources.selfCare.red} />
         </div>
         <div className="surface p-6 sm:p-8">
           <p className="eyebrow">Trading</p>
@@ -956,6 +995,36 @@ function getPeriod(date: string, range: StatsRange) {
   return { from: `${year - 5}-01-01`, to: `${year - 1}-12-31` };
 }
 
+function getGroupedStats(snapshot: FpairSnapshot, from: string, to: string, range: StatsRange) {
+  const buckets = buildBuckets(from, to, range);
+  const bucketStats = buckets.map((bucket) => getStats(snapshot, bucket.from, bucket.to));
+  const totals = bucketStats.reduce(
+    (acc, stats) => {
+      acc.cleanPeriods += stats.green > stats.red ? 1 : 0;
+      acc.green += stats.green;
+      acc.ratio += stats.ratio;
+      acc.red += stats.red;
+      return acc;
+    },
+    { cleanPeriods: 0, green: 0, ratio: 0, red: 0 },
+  );
+  const divisor = Math.max(1, buckets.length);
+
+  return {
+    ...totals,
+    avgGreen: totals.green / divisor,
+    avgRatio: totals.ratio / divisor,
+    avgRed: totals.red / divisor,
+  };
+}
+
+function getStatsUnit(range: StatsRange) {
+  if (range === "daily") return "day";
+  if (range === "weekly") return "week";
+  if (range === "monthly") return "month";
+  return "year";
+}
+
 function shiftPeriod(date: string, range: StatsRange, offset: number) {
   const parsed = new Date(`${date}T00:00:00`);
   if (range === "daily") parsed.setDate(parsed.getDate() + offset * 7);
@@ -965,7 +1034,23 @@ function shiftPeriod(date: string, range: StatsRange, offset: number) {
   return toIsoDate(parsed);
 }
 
-type JournalFpairTab = "journal" | "diary" | "quests" | "library";
+function getCleanStreakAtDate(snapshot: FpairSnapshot, selectedDate: string) {
+  let streak = 0;
+  let cursor = selectedDate;
+  const startDate = snapshot.settings.startDate || "";
+
+  for (let index = 0; index < 3650; index += 1) {
+    if (startDate && cursor < startDate) break;
+    const breakdown = getDayBreakdown(snapshot, cursor);
+    if (breakdown.green <= breakdown.red) break;
+    streak += 1;
+    cursor = shiftDate(cursor, -1);
+  }
+
+  return streak;
+}
+
+type JournalFpairTab = "journal" | "diary" | "quests" | "library" | "planned";
 
 function JournalQuestsWorkspace({
   activeQuests,
@@ -997,6 +1082,7 @@ function JournalQuestsWorkspace({
               ["diary", "Diary"],
               ["quests", "Quests"],
               ["library", "Library"],
+              ["planned", "Planned"],
             ]}
             value={tab}
             onChange={setTab}
@@ -1014,8 +1100,10 @@ function JournalQuestsWorkspace({
         <DashboardJournal forcedDiaryMode={diaryMode} forcedTab="diary" hideTabs selectedDate={selectedDate} today={today} />
       ) : tab === "quests" ? (
         <OverviewQuestsPanel activeQuests={activeQuests} onSaveResult={onSaveResult} selectedDate={selectedDate} snapshot={snapshot} />
-      ) : (
+      ) : tab === "library" ? (
         <QuestLibraryPanel onDeleteQuest={onDeleteQuest} onSaveQuest={onSaveQuest} snapshot={snapshot} />
+      ) : (
+        <CalendarPlanned selectedDate={selectedDate} snapshot={snapshot} today={today} />
       )}
     </div>
   );
@@ -1138,7 +1226,17 @@ const goalListTabs: Array<[ListType, string]> = [
   ["goals_12m", "12 months"],
 ];
 
-function ListsWorkspace({ items, onDelete, onSave }: { items: ListItem[]; onDelete: (itemId: string) => void; onSave: (item: ListItem) => void }) {
+function ListsWorkspace({
+  items,
+  onDelete,
+  onSave,
+  selectedDate,
+}: {
+  items: ListItem[];
+  onDelete: (itemId: string) => void;
+  onSave: (item: ListItem) => void;
+  selectedDate: string;
+}) {
   const [mainTab, setMainTab] = useState<ListMainTab>("goals");
   const [goalTab, setGoalTab] = useState<ListType>("goals_1m");
   const [title, setTitle] = useState("");
@@ -1151,9 +1249,12 @@ function ListsWorkspace({ items, onDelete, onSave }: { items: ListItem[]; onDele
 
   return (
     <div className="grid gap-4">
-      <section className="flex flex-wrap items-center gap-3">
-        <Segmented items={listMainTabs} value={mainTab} onChange={setMainTab} />
-        {mainTab === "goals" ? <Segmented items={goalListTabs} value={goalTab} onChange={setGoalTab} /> : null}
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented items={listMainTabs} value={mainTab} onChange={setMainTab} />
+          {mainTab === "goals" ? <Segmented items={goalListTabs} value={goalTab} onChange={setGoalTab} /> : null}
+        </div>
+        <h2 className="text-xl font-semibold leading-tight sm:text-2xl">{formatLongDate(selectedDate)}</h2>
       </section>
       <section className="grid gap-4 xl:grid-cols-[420px_1fr]">
         <div className="surface p-6 sm:p-8">
@@ -1240,6 +1341,7 @@ function TradesWorkspace({
   onSavePropFirm,
   onSaveTrade,
   propFirmPlans,
+  selectedDate,
   stats,
   today,
   trades,
@@ -1249,6 +1351,7 @@ function TradesWorkspace({
   onSavePropFirm: Parameters<typeof AddPropFirmForm>[0]["onSave"];
   onSaveTrade: (trade: ReturnType<typeof createTrade>) => void;
   propFirmPlans: PropFirmPlan[];
+  selectedDate: string;
   stats: ReturnType<typeof getTradingStats>;
   today: string;
   trades: FpairSnapshot["trades"];
@@ -1257,7 +1360,7 @@ function TradesWorkspace({
 
   return (
     <div className="grid gap-4">
-      <section className="flex justify-start">
+      <section className="flex flex-wrap items-center justify-between gap-3">
         <Segmented
           items={[
             ["trades", "Trades"],
@@ -1267,6 +1370,7 @@ function TradesWorkspace({
           value={tab}
           onChange={setTab}
         />
+        <h2 className="text-xl font-semibold leading-tight sm:text-2xl">{formatLongDate(selectedDate)}</h2>
       </section>
 
       {tab === "trades" ? (
@@ -1294,45 +1398,6 @@ function TradesWorkspace({
   );
 }
 
-function CalendarWorkspace({
-  activeQuests,
-  breakdown,
-  selectedDate,
-  snapshot,
-  today,
-}: {
-  activeQuests: Quest[];
-  breakdown: ReturnType<typeof getDayBreakdown>;
-  selectedDate: string;
-  snapshot: FpairSnapshot;
-  today: string;
-}) {
-  const [tab, setTab] = useState<CalendarSubTab>("history");
-
-  return (
-    <div className="grid gap-4">
-      <section className="flex justify-start">
-        <Segmented
-          items={[
-            ["history", "History"],
-            ["planned", "Planned"],
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
-      </section>
-
-      <section className="grid gap-4">
-        {tab === "history" ? (
-          <CalendarHistoryDetail activeQuests={activeQuests} breakdown={breakdown} selectedDate={selectedDate} snapshot={snapshot} />
-        ) : (
-          <CalendarPlanned selectedDate={selectedDate} snapshot={snapshot} today={today} />
-        )}
-      </section>
-    </div>
-  );
-}
-
 function CalendarHistoryDetail({
   activeQuests,
   breakdown,
@@ -1346,12 +1411,16 @@ function CalendarHistoryDetail({
 }) {
   const entry = snapshot.journal[selectedDate];
   const trades = snapshot.trades.filter((trade) => trade.date === selectedDate);
+  const streak = getCleanStreakAtDate(snapshot, selectedDate);
 
   return (
     <div className="surface p-6 sm:p-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-semibold">{formatLongDate(selectedDate)}</h2>
+          <span className="border border-[#1f6feb]/30 bg-[#1f6feb]/10 px-3 py-1 text-sm font-semibold text-[#1f6feb]">
+            Streak {streak}
+          </span>
         </div>
         <div className="grid grid-cols-3 border border-site bg-site text-center text-sm">
           <HeaderStat label="Green" value={breakdown.green} />
@@ -1390,8 +1459,8 @@ function CalendarHistoryDetail({
             {(entry?.wants ?? []).map((task) => (
               <div key={task.id} className="grid grid-cols-[1fr_auto] border border-site bg-site p-3 text-sm">
                 <span>{task.text}</span>
-                <span className={cn("font-semibold", task.completed === true && "text-emerald-700", task.completed === false && "text-red-700")}>
-                  {task.completed === true ? "+1" : task.completed === false ? "-1" : "open"}
+                <span className={cn("font-semibold", task.completed === true && "text-emerald-700", (task.completed === false || (task.completed === null && selectedDate < getTodayIsoDate())) && "text-red-700")}>
+                  {task.completed === true ? "+1" : task.completed === false || (task.completed === null && selectedDate < getTodayIsoDate()) ? "-1" : "open"}
                 </span>
               </div>
             ))}

@@ -243,6 +243,22 @@ export async function loadJournalEntries(userId: string): Promise<JournalEntries
   if (tasksError) throw tasksError;
   if (activitiesError) throw activitiesError;
 
+  const pastOpenTasks = (tasksData ?? []).filter((row) => row.entry_date < getTodayIsoDate() && row.completed === null);
+  if (pastOpenTasks.length) {
+    const { error } = await supabase.from("dashboard_journal_tasks").upsert(
+      pastOpenTasks.map((row) => ({
+        completed: false,
+        created_at: normalizeCreatedAt(row.created_at),
+        entry_date: row.entry_date,
+        id: normalizeId(row.id),
+        position: row.position ?? 0,
+        text: row.text ?? "",
+        user_id: userId,
+      })),
+    );
+    if (error) throw error;
+  }
+
   const entries: JournalEntries = {};
 
   for (const row of entriesData ?? []) {
@@ -262,7 +278,7 @@ export async function loadJournalEntries(userId: string): Promise<JournalEntries
     entry.wants.push({
       id: normalizeId(row.id),
       text: row.text ?? "",
-      completed: row.completed,
+      completed: row.entry_date < getTodayIsoDate() && row.completed === null ? false : row.completed,
       createdAt: normalizeCreatedAt(row.created_at),
     });
   }
@@ -601,7 +617,7 @@ function isMissingDiaryTextError(error: unknown) {
   );
 }
 
-export function countEntry(entry: JournalEntry | undefined) {
+export function countEntry(entry: JournalEntry | undefined, date = getTodayIsoDate()) {
   if (!entry) return { green: 0, red: 0 };
 
   return {
@@ -612,6 +628,9 @@ export function countEntry(entry: JournalEntry | undefined) {
       ).length,
     red:
       entry.wants.filter((task) => task.completed === false).length +
+      (date < getTodayIsoDate()
+        ? entry.wants.filter((task) => task.completed === null).length
+        : 0) +
       entry.activities.filter(
         (activity) => activity.status === "negative" && activity.text.trim(),
       ).length,
@@ -630,7 +649,7 @@ export function getGreenStreak(entries: JournalEntries, today: string) {
   let currentDate = today;
 
   while (entries[currentDate]) {
-    const counts = countEntry(entries[currentDate]);
+    const counts = countEntry(entries[currentDate], currentDate);
     if (counts.green <= counts.red) break;
     streak += 1;
     currentDate = shiftDate(currentDate, -1);

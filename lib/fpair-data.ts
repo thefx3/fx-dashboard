@@ -309,9 +309,70 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
     trades,
   };
 
+  if (!questResultRows.error) {
+    await finalizePastOpenQuestRows(userId, quests, questResultRows.data ?? [], questResults, getLevelProgress(snapshot).level);
+  }
+
   snapshotCache.set(userId, { cachedAt: Date.now(), snapshot });
   latestFpairSnapshot = snapshot;
   return snapshot;
+}
+
+async function finalizePastOpenQuestRows(
+  userId: string,
+  quests: Quest[],
+  rows: Record<string, unknown>[],
+  questResults: Record<string, QuestResult>,
+  targetLevel: number,
+) {
+  const today = getTodayIsoDate();
+  const questById = new Map(quests.map((quest) => [quest.id, quest]));
+  const updatedAt = new Date().toISOString();
+  const rowsToComplete = rows
+    .filter((row) => stringValue(row.status) === "open")
+    .map((row) => ({
+      date: stringValue(row.entry_date),
+      quest: questById.get(stringValue(row.quest_id)),
+      questId: stringValue(row.quest_id),
+      value: row.value ?? null,
+    }))
+    .map(({ date, quest, questId, value }) => ({
+      date,
+      questId,
+      status: date && quest && date < today && getActiveQuests([quest], date).length ? getAutoQuestStatus(quest, value, targetLevel) : null,
+      value,
+    }))
+    .flatMap((row) => (row.date && row.questId && row.status ? [{ ...row, status: row.status }] : []));
+
+  if (!rowsToComplete.length) return;
+
+  const { error } = await supabase.from("fpair_quest_results").upsert(
+    rowsToComplete.map(({ date, questId, status, value }) => ({
+      entry_date: date,
+      quest_id: questId,
+      status,
+      updated_at: updatedAt,
+      user_id: userId,
+      value,
+    })),
+  );
+
+  if (error) {
+    console.warn("Failed to finalize past open quest rows.", error);
+    return;
+  }
+
+  rowsToComplete.forEach(({ date, questId, status }) => {
+    questResults[date] ??= { completedQuestIds: [], failedQuestIds: [], questValues: {} };
+    if (questResults[date].completedQuestIds.includes(questId) || questResults[date].failedQuestIds.includes(questId)) {
+      return;
+    }
+    if (status === "completed") {
+      questResults[date].completedQuestIds.push(questId);
+    } else {
+      questResults[date].failedQuestIds.push(questId);
+    }
+  });
 }
 
 export function patchFpairSnapshotCache(userId: string, snapshot: FpairSnapshot) {
@@ -665,6 +726,8 @@ export function getQuestStatus(snapshot: FpairSnapshot, date: string, questId: s
   const result = snapshot.questResults[date];
   if (result?.completedQuestIds.includes(questId)) return "completed";
   if (result?.failedQuestIds.includes(questId)) return "failed";
+  const autoStatus = getAutoQuestStatusForDate(snapshot, date, questId, result);
+  if (autoStatus) return autoStatus;
   return "open";
 }
 
@@ -718,6 +781,15 @@ function getLevelProgressForTargetLevel(snapshot: FpairSnapshot, targetLevel: nu
     ...Object.keys(snapshot.health),
     ...Object.keys(snapshot.questResults),
   ]);
+  if (snapshot.quests.some((quest) => quest.active)) {
+    const today = getTodayIsoDate();
+    const yesterday = shiftDate(today, -1);
+    const existingDates = [...dates].sort();
+    const start = snapshot.settings.startDate || existingDates[0] || yesterday;
+    if (start <= yesterday) {
+      enumerateDates(start, yesterday).forEach((date) => dates.add(date));
+    }
+  }
   let green = 0;
   let red = 0;
 
@@ -749,20 +821,55 @@ function getDayBreakdownForLevel(snapshot: FpairSnapshot, date: string, targetLe
     entry?.activities.filter((activity) => activity.status === "positive" && activity.text.trim()).length ?? 0;
   const activityRed =
     entry?.activities.filter((activity) => activity.status === "negative" && activity.text.trim()).length ?? 0;
-  const questGreen = result?.completedQuestIds.length ?? 0;
-  const questRed = result?.failedQuestIds.length ?? 0;
+  const taskOpenPastRed = date < getTodayIsoDate() ? entry?.wants.filter((task) => task.completed === null).length ?? 0 : 0;
+  const autoQuestStatus = getAutoQuestStatusIds(snapshot, date, result, targetLevel);
+  const questGreen = (result?.completedQuestIds.length ?? 0) + autoQuestStatus.completed.length;
+  const questRed = (result?.failedQuestIds.length ?? 0) + autoQuestStatus.failed.length;
   const green = taskGreen + activityGreen + questGreen + selfCare.green;
-  const red = taskRed + activityRed + questRed + selfCare.red;
+  const red = taskRed + taskOpenPastRed + activityRed + questRed + selfCare.red;
 
   return {
     conversion: green + red ? Math.round((green / (green + red)) * 100) : 0,
     green,
-    journal: { green: taskGreen + activityGreen, red: taskRed + activityRed },
+    journal: { green: taskGreen + activityGreen, red: taskRed + taskOpenPastRed + activityRed },
     quests: { green: questGreen, red: questRed },
     red,
     score: green - red,
     selfCare,
   };
+}
+
+function getAutoQuestStatusIds(snapshot: FpairSnapshot, date: string, result: QuestResult | undefined, targetLevel: number) {
+  const autoStatus = { completed: [] as string[], failed: [] as string[] };
+  if (date >= getTodayIsoDate()) return autoStatus;
+  const completedQuestIds = new Set(result?.completedQuestIds ?? []);
+  const failedQuestIds = new Set(result?.failedQuestIds ?? []);
+
+  getActiveQuests(snapshot.quests, date)
+    .filter((quest) => !completedQuestIds.has(quest.id) && !failedQuestIds.has(quest.id))
+    .forEach((quest) => {
+      const status = getAutoQuestStatus(quest, result?.questValues[quest.id] ?? null, targetLevel);
+      autoStatus[status].push(quest.id);
+    });
+
+  return autoStatus;
+}
+
+function getAutoQuestStatusForDate(snapshot: FpairSnapshot, date: string, questId: string, result?: QuestResult) {
+  const autoStatus = getAutoQuestStatusIds(snapshot, date, result, getLevelProgress(snapshot).level);
+  if (autoStatus.completed.includes(questId)) return "completed";
+  if (autoStatus.failed.includes(questId)) return "failed";
+  return null;
+}
+
+function getAutoQuestStatus(quest: Quest, rawValue: unknown, targetLevel: number): "completed" | "failed" {
+  const value = nullableNumber(rawValue);
+  const target = getDynamicQuestTarget(quest, targetLevel);
+
+  if (quest.condition === "to_not_do") return "completed";
+  if (quest.condition === "reach_target" && target != null) return value != null && value >= target ? "completed" : "failed";
+  if (quest.condition === "stay_under" && target != null) return value != null && value <= target ? "completed" : "failed";
+  return "failed";
 }
 
 export function getStats(snapshot: FpairSnapshot, from: string, to: string) {
@@ -876,6 +983,24 @@ export function getDynamicSelfCareTargets(profile: Profile, level: number) {
   };
 }
 
+function getDynamicQuestTarget(quest: Quest, level: number) {
+  if (quest.target == null || quest.category !== "discipline") {
+    return quest.target;
+  }
+
+  const tier = Math.max(0, Math.min(10, Math.floor(level / 10)));
+
+  if (quest.condition === "reach_target") {
+    return roundTarget(Math.min(quest.target * (1 + tier * 0.035), quest.target * 1.35));
+  }
+
+  if (quest.condition === "stay_under") {
+    return roundTarget(Math.max(quest.target * (1 - tier * 0.025), quest.target * 0.8));
+  }
+
+  return quest.target;
+}
+
 export function daysBetween(startDate: string, endDate: string) {
   if (!startDate) return 0;
   const start = new Date(`${startDate}T00:00:00`);
@@ -905,6 +1030,12 @@ export function enumerateDates(from: string, to: string) {
     cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
   }
   return dates;
+}
+
+function shiftDate(date: string, offset: number) {
+  const parsed = new Date(`${date}T00:00:00`);
+  parsed.setDate(parsed.getDate() + offset);
+  return toIsoDate(parsed);
 }
 
 function emptyBreakdown(): DayBreakdown {
