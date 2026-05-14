@@ -51,17 +51,18 @@ export default function DashboardSidebarCalendar({
   }, []);
 
   const monthDays = useMemo(() => getMonthDays(visibleDate), [visibleDate]);
-  const streakDays = useMemo(() => {
-    if (!snapshot) return new Set<string>();
-    return new Set(
-      monthDays
-        .filter(Boolean)
-        .filter((day) => {
-          const breakdown = getDayBreakdown(snapshot, day!.date);
-          return breakdown.green > breakdown.red;
-        })
-        .map((day) => day!.date),
-    );
+  const scoredDays = useMemo(() => {
+    const positive = new Set<string>();
+    const negative = new Set<string>();
+    if (!snapshot) return { negative, positive };
+
+    monthDays.filter(Boolean).forEach((day) => {
+      const breakdown = getDayBreakdown(snapshot, day!.date);
+      if (breakdown.green > breakdown.red) positive.add(day!.date);
+      if (breakdown.red > breakdown.green) negative.add(day!.date);
+    });
+
+    return { negative, positive };
   }, [monthDays, snapshot]);
   const monthLabel = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -101,13 +102,16 @@ export default function DashboardSidebarCalendar({
           if (!day) return <span key={`empty-${index}`} aria-hidden="true" />;
           const isSelected = activeView === "stats" && day.date === selectedDate;
           const isToday = day.date === today;
-          const isStreak = streakDays.has(day.date);
+          const isPositive = scoredDays.positive.has(day.date);
+          const isNegative = scoredDays.negative.has(day.date);
           const className = cn(
             "grid h-7 place-items-center text-xs font-semibold transition",
             isSelected
               ? "bg-white text-ink"
-              : isStreak
+              : isPositive
                 ? "bg-[#1f6feb] text-white hover:bg-[#2f81f7]"
+                : isNegative
+                  ? "bg-red-600 text-white hover:bg-red-500"
                 : "text-white/[0.62] hover:bg-white/[0.08] hover:text-white",
             isToday && !isSelected && "ring-1 ring-white/[0.24]",
           );

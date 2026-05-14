@@ -519,9 +519,9 @@ function DiaryView({
           <p className="eyebrow">Diary feed</p>
           <div className="mt-5 grid gap-3">
             {diaryEntries.length ? diaryEntries.map(([date, item]) => (
-              <div key={date} className="border border-site bg-site p-4">
+              <div key={date} className="border border-site bg-card p-4 shadow-sm">
                 <p className="text-sm font-semibold text-[#a4772b]">{formatDate(date)}</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-site-muted">{item.diaryText}</p>
+                <p className="mt-3 whitespace-pre-wrap border-l-4 border-[#d9aa62] bg-site px-4 py-3 text-[0.95rem] leading-7 text-site">{item.diaryText}</p>
               </div>
             )) : <EmptyState text="No diary insight yet." />}
           </div>

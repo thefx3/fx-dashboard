@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   HeartPulse,
+  Pencil,
   Plus,
   Target,
   X,
@@ -257,8 +258,14 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
     try {
       await action();
       await reload(userId);
-    } catch {
-      setSyncError("Sync failed. The action was not saved.");
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? ` ${error.message}`
+          : typeof error === "object" && error && "message" in error && typeof error.message === "string"
+            ? ` ${error.message}`
+            : "";
+      setSyncError(`Sync failed. The action was not saved.${message}`);
     }
   }
 
@@ -931,33 +938,28 @@ function buildSelfCareTrend(snapshot: FpairSnapshot, from: string, to: string, r
 function buildBuckets(from: string, to: string, range: StatsRange) {
   const dates = enumerateDates(from, to);
   if (range === "daily") {
+    return [{ from, label: formatWeekday(from).slice(0, 3), to }];
+  }
+
+  if (range === "weekly") {
     const weekdayLabels = ["M", "T", "W", "T", "F", "S", "S"];
     return dates.slice(0, 7).map((date, index) => ({ from: date, label: weekdayLabels[index] ?? formatWeekday(date).slice(0, 1), to: date }));
   }
 
-  if (range === "weekly") {
-    return chunkDatesIntoCount(dates, 4).map((bucket, index) => ({
+  if (range === "monthly") {
+    return chunkDatesIntoCount(dates, 5).map((bucket, index) => ({
       from: bucket[0],
       label: `W${index + 1}`,
       to: bucket[bucket.length - 1],
     }));
   }
 
-  if (range === "monthly") {
-    return Array.from({ length: 12 }, (_, index) => {
-      const year = Number(from.slice(0, 4));
-      const date = new Date(year, index, 1);
-      const start = toIsoDate(date);
-      const end = toIsoDate(new Date(year, index + 1, 0));
-      return { from: start, label: monthInitials[index], to: end };
-    });
-  }
-
-  const fromYear = Number(from.slice(0, 4));
-  const toYear = Number(to.slice(0, 4));
-  return Array.from({ length: Math.max(1, toYear - fromYear + 1) }, (_, index) => {
-    const year = fromYear + index;
-    return { from: `${year}-01-01`, label: String(year), to: `${year}-12-31` };
+  const year = Number(from.slice(0, 4));
+  return Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(year, index, 1);
+    const start = toIsoDate(date);
+    const end = toIsoDate(new Date(year, index + 1, 0));
+    return { from: start, label: monthInitials[index], to: end };
   });
 }
 
@@ -975,24 +977,24 @@ function getPeriod(date: string, range: StatsRange) {
   const parsed = new Date(`${date}T00:00:00`);
 
   if (range === "daily") {
+    const day = toIsoDate(parsed);
+    return { from: day, to: day };
+  }
+
+  if (range === "weekly") {
     const mondayOffset = (parsed.getDay() + 6) % 7;
     parsed.setDate(parsed.getDate() - mondayOffset);
     return { from: toIsoDate(parsed), to: shiftDate(toIsoDate(parsed), 6) };
   }
 
-  if (range === "weekly") {
+  if (range === "monthly") {
     const from = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-01`;
     const to = toIsoDate(new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0));
     return { from, to };
   }
 
-  if (range === "monthly") {
-    const year = parsed.getFullYear();
-    return { from: `${year}-01-01`, to: `${year}-12-31` };
-  }
-
   const year = parsed.getFullYear();
-  return { from: `${year - 5}-01-01`, to: `${year - 1}-12-31` };
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
 }
 
 function getGroupedStats(snapshot: FpairSnapshot, from: string, to: string, range: StatsRange) {
@@ -1020,17 +1022,17 @@ function getGroupedStats(snapshot: FpairSnapshot, from: string, to: string, rang
 
 function getStatsUnit(range: StatsRange) {
   if (range === "daily") return "day";
-  if (range === "weekly") return "week";
-  if (range === "monthly") return "month";
-  return "year";
+  if (range === "weekly") return "day";
+  if (range === "monthly") return "week";
+  return "month";
 }
 
 function shiftPeriod(date: string, range: StatsRange, offset: number) {
   const parsed = new Date(`${date}T00:00:00`);
-  if (range === "daily") parsed.setDate(parsed.getDate() + offset * 7);
-  if (range === "weekly") parsed.setMonth(parsed.getMonth() + offset);
-  if (range === "monthly") parsed.setFullYear(parsed.getFullYear() + offset);
-  if (range === "yearly") parsed.setFullYear(parsed.getFullYear() + offset * 5);
+  if (range === "daily") parsed.setDate(parsed.getDate() + offset);
+  if (range === "weekly") parsed.setDate(parsed.getDate() + offset * 7);
+  if (range === "monthly") parsed.setMonth(parsed.getMonth() + offset);
+  if (range === "yearly") parsed.setFullYear(parsed.getFullYear() + offset);
   return toIsoDate(parsed);
 }
 
@@ -1241,11 +1243,49 @@ function ListsWorkspace({
   const [goalTab, setGoalTab] = useState<ListType>("goals_1m");
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
+  const [editingItem, setEditingItem] = useState<ListItem | null>(null);
   const activeListType: ListType = mainTab === "goals" ? goalTab : mainTab;
   const activeLabel = mainTab === "goals"
     ? goalListTabs.find(([value]) => value === goalTab)?.[1] ?? "Goals"
     : listMainTabs.find(([value]) => value === mainTab)?.[1] ?? "List";
   const visibleItems = items.filter((item) => item.listType === activeListType);
+  const openItems = visibleItems.filter((item) => !item.completed);
+  const completedItems = visibleItems.filter((item) => item.completed);
+  const renderItem = (item: ListItem) => (
+    <div key={item.id} className="grid gap-2 border border-site bg-site p-2.5 text-sm xl:grid-cols-[auto_1fr] xl:items-start">
+      <button
+        type="button"
+        className={cn("grid h-7 w-7 place-items-center border", item.completed ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-site bg-card text-site-muted")}
+        onClick={() => onSave({ ...item, completed: !item.completed })}
+      >
+        <Check className="h-3.5 w-3.5" />
+      </button>
+      <div className="min-w-0">
+        <span className={cn("block font-semibold leading-5", item.completed && "line-through opacity-60")}>{item.title}</span>
+        {item.detail ? <span className="mt-0.5 block text-xs leading-5 text-site-muted">{item.detail}</span> : null}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="mr-auto text-[0.64rem] font-semibold uppercase tracking-[0.1em] text-site-muted/60">
+            Added {formatShortDate(item.createdAt.slice(0, 10))}
+          </span>
+          <button
+            type="button"
+            className="inline-flex h-7 items-center gap-1 border border-site bg-card px-2 text-xs font-semibold text-site-muted transition hover:text-site"
+            onClick={() => {
+              setEditingItem(item);
+              setTitle(item.title);
+              setDetail(item.detail);
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+            Edit
+          </button>
+          <button type="button" className="h-7 border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-700" onClick={() => onDelete(item.id)}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="grid gap-4">
@@ -1259,7 +1299,7 @@ function ListsWorkspace({
       <section className="grid gap-4 xl:grid-cols-[420px_1fr]">
         <div className="surface p-6 sm:p-8">
           <p className="eyebrow">My lists</p>
-          <h2 className="mt-2 text-2xl font-semibold">{activeLabel}</h2>
+          <h2 className="mt-2 text-2xl font-semibold">{editingItem ? "Edit item" : activeLabel}</h2>
           <div className="mt-5 grid gap-3">
             <input className="form-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Title" />
             <textarea className="form-input min-h-24 resize-y" value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Details" />
@@ -1269,48 +1309,61 @@ function ListsWorkspace({
               onClick={() => {
                 const trimmed = title.trim();
                 if (!trimmed) return;
-                onSave({
-                  completed: false,
-                  createdAt: new Date().toISOString(),
-                  detail: detail.trim(),
-                  id: `list-${Date.now()}-${Math.round(Math.random() * 10000)}`,
-                  listType: activeListType,
-                  position: items.length,
-                  title: trimmed,
-                });
+                onSave(editingItem
+                  ? {
+                      ...editingItem,
+                      detail: detail.trim(),
+                      title: trimmed,
+                    }
+                  : {
+                      completed: false,
+                      createdAt: new Date().toISOString(),
+                      detail: detail.trim(),
+                      id: `list-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                      listType: activeListType,
+                      position: items.length,
+                      title: trimmed,
+                    });
+                setEditingItem(null);
                 setTitle("");
                 setDetail("");
               }}
             >
-              <Plus className="h-4 w-4" />
-              Add item
+              {editingItem ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {editingItem ? "Save changes" : "Add item"}
             </button>
+            {editingItem ? (
+              <button
+                type="button"
+                className="border border-site bg-card px-3 py-2 font-semibold text-site-muted transition hover:text-site"
+                onClick={() => {
+                  setEditingItem(null);
+                  setTitle("");
+                  setDetail("");
+                }}
+              >
+                Cancel edit
+              </button>
+            ) : null}
           </div>
         </div>
         <div className="surface p-6 sm:p-8">
           <p className="eyebrow">Items</p>
-          <div className="mt-5 grid gap-2">
-            {visibleItems.length ? visibleItems.map((item) => (
-              <div key={item.id} className="grid gap-3 border border-site bg-site p-3 text-sm lg:grid-cols-[auto_1fr_auto] lg:items-start">
-                <button
-                  type="button"
-                  className={cn("mt-0.5 grid h-8 w-8 place-items-center border", item.completed ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-site bg-card text-site-muted")}
-                  onClick={() => onSave({ ...item, completed: !item.completed })}
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <span>
-                  <span className={cn("block font-semibold", item.completed && "line-through opacity-60")}>{item.title}</span>
-                  <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#a4772b]">
-                    Added {formatShortDate(item.createdAt.slice(0, 10))}
-                  </span>
-                  {item.detail ? <span className="mt-1 block text-site-muted">{item.detail}</span> : null}
-                </span>
-                <button type="button" className="border border-red-200 bg-red-50 px-3 py-2 font-semibold text-red-700" onClick={() => onDelete(item.id)}>
-                  Delete
-                </button>
+          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+            <div className="grid content-start gap-2">
+              <div className="flex items-center justify-between gap-3 border-b border-site pb-2">
+                <h3 className="text-sm font-semibold">Open</h3>
+                <span className="text-xs font-semibold text-site-muted">{openItems.length}</span>
               </div>
-            )) : <EmptyState text="No item in this list yet." />}
+              {openItems.length ? openItems.map(renderItem) : <EmptyState text="No open item." />}
+            </div>
+            <div className="grid content-start gap-2">
+              <div className="flex items-center justify-between gap-3 border-b border-site pb-2">
+                <h3 className="text-sm font-semibold">Completed</h3>
+                <span className="text-xs font-semibold text-site-muted">{completedItems.length}</span>
+              </div>
+              {completedItems.length ? completedItems.map(renderItem) : <EmptyState text="No completed item." />}
+            </div>
           </div>
         </div>
       </section>

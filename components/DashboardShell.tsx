@@ -5,6 +5,7 @@ import {
   ExternalLink,
   Home,
   ListChecks,
+  Menu,
   NotebookPen,
   Settings,
 } from "lucide-react";
@@ -58,7 +59,10 @@ export default function DashboardShell({
 
       <section className="flex min-h-0 min-w-0 flex-col">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-site bg-site/[0.92] px-4 backdrop-blur sm:px-6">
-          <DayCounter today={today} />
+          <div className="flex min-w-0 items-center gap-3">
+            <MobileDashboardMenu activeView={view} />
+            <DayCounter today={today} />
+          </div>
           <div className="flex items-center gap-3">
             <span className="hidden max-w-56 truncate border border-site bg-card px-3 py-2 text-sm text-site-muted sm:inline-flex">
               {email}
@@ -198,5 +202,56 @@ function DashboardSidebar({
       </div>
 
     </aside>
+  );
+}
+
+function MobileDashboardMenu({ activeView }: { activeView: DashboardShellProps["view"] }) {
+  return (
+    <details className="group relative lg:hidden">
+      <summary className="inline-flex h-10 w-10 cursor-pointer list-none items-center justify-center border border-site bg-card text-site-muted transition hover:text-site [&::-webkit-details-marker]:hidden">
+        <Menu className="h-5 w-5" aria-hidden="true" />
+        <span className="sr-only">Open dashboard menu</span>
+      </summary>
+      <div className="absolute left-0 top-12 z-50 grid w-[min(82vw,280px)] gap-1 border border-site bg-card p-2 shadow-xl">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.view === activeView;
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 border px-3 py-2.5 text-sm font-semibold transition",
+                isActive
+                  ? "border-site bg-ink text-white"
+                  : "border-transparent text-site-muted hover:border-site hover:text-site",
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              {item.label}
+            </Link>
+          );
+        })}
+        <Link
+          href="/dashboard/settings"
+          className={cn(
+            "flex items-center gap-3 border px-3 py-2.5 text-sm font-semibold transition",
+            activeView === "settings"
+              ? "border-site bg-ink text-white"
+              : "border-transparent text-site-muted hover:border-site hover:text-site",
+          )}
+        >
+          <Settings className="h-4 w-4" aria-hidden="true" />
+          Settings
+        </Link>
+        <Link
+          href="/"
+          className="flex items-center gap-3 border border-transparent px-3 py-2.5 text-sm font-semibold text-site-muted transition hover:border-site hover:text-site"
+        >
+          <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          Public site
+        </Link>
+      </div>
+    </details>
   );
 }

@@ -472,17 +472,43 @@ export async function deleteQuest(userId: string, questId: string) {
 }
 
 export async function saveListItem(userId: string, item: ListItem) {
-  const { error } = await supabase.from("fpair_list_items").upsert({
+  const payload = {
     completed: item.completed,
-    created_at: item.createdAt,
     detail: item.detail,
     id: item.id,
     list_type: item.listType,
     position: item.position,
     title: item.title,
-    updated_at: new Date().toISOString(),
     user_id: userId,
-  });
+  };
+  const updatePayload = {
+    completed: item.completed,
+    detail: item.detail,
+    list_type: item.listType,
+    position: item.position,
+    title: item.title,
+  };
+
+  const existing = await supabase
+    .from("fpair_list_items")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("id", item.id)
+    .limit(1);
+
+  if (existing.error) throw existing.error;
+
+  if (existing.data?.length) {
+    const { error } = await supabase
+      .from("fpair_list_items")
+      .update(updatePayload)
+      .eq("user_id", userId)
+      .eq("id", item.id);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase.from("fpair_list_items").insert(payload);
   if (error) throw error;
 }
 
@@ -1156,15 +1182,23 @@ function rowToPropFirmPlan(row: Record<string, unknown>): PropFirmPlan {
 }
 
 function rowToListItem(row: Record<string, unknown>): ListItem {
+  const id = stringValue(row.id);
   return {
     completed: row.completed === true,
-    createdAt: stringValue(row.created_at) || new Date().toISOString(),
+    createdAt: stringValue(row.created_at) || createdAtFromListId(id) || new Date().toISOString(),
     detail: stringValue(row.detail),
-    id: stringValue(row.id),
+    id,
     listType: normalizeListType(row.list_type),
     position: numberValue(row.position, 0),
     title: stringValue(row.title),
   };
+}
+
+function createdAtFromListId(id: string) {
+  const match = /^list-(\d+)-/.exec(id);
+  if (!match) return "";
+  const timestamp = Number(match[1]);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : "";
 }
 
 function rowToStoredLevelProgress(row: Record<string, unknown> | null | undefined): StoredLevelProgress | null {

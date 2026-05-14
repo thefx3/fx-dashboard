@@ -231,6 +231,12 @@ create table if not exists public.fpair_list_items (
 alter table public.fpair_list_items
   add column if not exists created_at timestamptz not null default now();
 
+alter table public.fpair_list_items
+  add column if not exists updated_at timestamptz not null default now();
+
+create unique index if not exists fpair_list_items_user_id_id_idx
+  on public.fpair_list_items (user_id, id);
+
 alter table public.fpair_quests
   drop constraint if exists fpair_quests_domain_check;
 
