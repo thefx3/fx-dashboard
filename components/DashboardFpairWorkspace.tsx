@@ -31,6 +31,7 @@ import { getTodayIsoDate, toIsoDate } from "@/lib/date";
 import { emptyEntry, getCurrentUserId, saveJournalEntry } from "@/lib/dashboard-data";
 import {
   buildTodayHealth,
+  applyAccountPhaseTransition,
   createAccount,
   createTrade,
   defaultProfile,
@@ -253,6 +254,20 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
     if (nextTab !== "history") setStatsRange(nextTab);
   }, []);
 
+  async function saveAccountWithTransition(nextAccount: Account) {
+    const currentAccount = snapshot.accounts.find((account) => account.id === nextAccount.id);
+    if (!currentAccount || currentAccount.phase === nextAccount.phase) {
+      await saveAccount(userId!, nextAccount);
+      return;
+    }
+
+    const transition = applyAccountPhaseTransition(currentAccount, nextAccount.phase, snapshot.trades, today);
+    await Promise.all([
+      saveAccount(userId!, transition.account),
+      transition.trade ? saveTrade(userId!, transition.trade) : Promise.resolve(),
+    ]);
+  }
+
   async function runSync(action: () => Promise<void>) {
     if (!userId) return;
     try {
@@ -287,7 +302,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
     return shell(
       <TradesWorkspace
         accounts={snapshot.accounts}
-        onSaveAccount={(account) => runSync(() => saveAccount(userId!, account))}
+        onSaveAccount={(account) => runSync(() => saveAccountWithTransition(account))}
         onSavePropFirm={(plan) => runSync(() => savePropFirmPlan(plan))}
         onSaveTrade={(trade) => runSync(() => saveTrade(userId!, trade))}
         propFirmPlans={snapshot.propFirmPlans}

@@ -273,7 +273,7 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
   const health = healthRowsToMap(healthRows.data ?? []);
   const quests = questRows.error ? [] : (questRows.data ?? []).map(rowToQuest).filter(Boolean);
   const questResults = questResultRows.error ? {} : questResultsToMap(questResultRows.data ?? []);
-  const trades = tradeRows.error
+  const loadedTrades = tradeRows.error
     ? []
     : (tradeRows.data ?? [])
         .filter((row) => row.status !== "deleted")
@@ -283,6 +283,18 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
   const propFirmPlans = planRows.error ? [] : (planRows.data ?? []).map(rowToPropFirmPlan);
   const lists = listRows.error ? [] : (listRows.data ?? []).map(rowToListItem);
   const plansById = new Map((planRows.error ? [] : planRows.data ?? []).map((row) => [String(row.id), row]));
+  const loadedAccounts = accountRows.error
+    ? []
+    : (accountRows.data ?? []).map((row) =>
+        rowToAccount(row, {
+          events: events.filter((event) => event.accountId === row.id),
+          payouts: payouts.filter((payout) => payout.accountId === row.id),
+          plan: plansById.get(String(row.plan_id)),
+          trades: loadedTrades.filter((trade) => trade.accountId === row.id),
+        }),
+      );
+  const missingBlowTrades = getMissingBlowTrades(loadedAccounts, loadedTrades);
+  const trades = [...missingBlowTrades, ...loadedTrades];
   const accounts = accountRows.error
     ? []
     : (accountRows.data ?? []).map((row) =>
@@ -308,6 +320,10 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
     settings: dashboard.settings,
     trades,
   };
+
+  if (missingBlowTrades.length) {
+    await Promise.all(missingBlowTrades.map((trade) => saveTrade(userId, trade))).catch(() => undefined);
+  }
 
   if (!questResultRows.error) {
     await finalizePastOpenQuestRows(userId, quests, questResultRows.data ?? [], questResults, getLevelProgress(snapshot).level);
@@ -584,6 +600,88 @@ export async function saveTrade(userId: string, trade: Trade) {
   if (error) throw error;
 }
 
+export function applyAccountPhaseTransition(account: Account, phase: AccountPhase, existingTrades: Trade[] = [], date = getTodayIsoDate()) {
+  if (account.phase === phase) {
+    return { account, trade: null as Trade | null };
+  }
+
+  const history = account.history ?? [];
+  const now = new Date().toISOString();
+
+  if (phase === "funded" && account.phase === "evaluation") {
+    return {
+      account: {
+        ...account,
+        activationFeesPaid: account.activationFeesPaid + account.price,
+        balance: account.startingBalance,
+        fundedAt: now,
+        phase,
+        history: [
+          { accountId: account.id, date, id: `event-funded-${Date.now()}`, label: `Moved to funded / balance reset to ${formatMoney(account.startingBalance)}` },
+          ...history,
+        ],
+      },
+      trade: null,
+    };
+  }
+
+  if (isBlownPhase(account.phase) && phase !== "evaluation") {
+    return { account, trade: null };
+  }
+
+  if (phase === "evaluation" && isBlownPhase(account.phase)) {
+    return {
+      account: {
+        ...account,
+        balance: account.startingBalance,
+        lastResetAt: now,
+        phase,
+        resetCostsPaid: account.resetCostsPaid + account.price,
+        resetCount: account.resetCount + 1,
+        history: [
+          { accountId: account.id, date, id: `event-reset-${Date.now()}`, label: `Reset paid ${formatMoney(account.price)} / moved to evaluation` },
+          ...history,
+        ],
+      },
+      trade: null,
+    };
+  }
+
+  if (phase === "blown_eval" || phase === "blown_funded") {
+    const blownPhase = toBlownPhase(account.phase);
+    const nextBlowIndex = account.blownEvaluationCount + account.blownFundedCount + 1;
+    const trade = createBlowTrade(account, nextBlowIndex, date);
+    const shouldAddTrade = !existingTrades.some((existing) => existing.id === trade.id);
+
+    return {
+      account: {
+        ...account,
+        balance: account.balance + (shouldAddTrade ? trade.pnl : 0),
+        blownEvaluationCount: account.blownEvaluationCount + (blownPhase === "blown_eval" ? 1 : 0),
+        blownFundedCount: account.blownFundedCount + (blownPhase === "blown_funded" ? 1 : 0),
+        phase: blownPhase,
+        history: [
+          { accountId: account.id, date, id: `event-blow-${Date.now()}`, label: blownPhase === "blown_eval" ? "Evaluation blown" : "Funded account blown" },
+          ...history,
+        ],
+      },
+      trade: shouldAddTrade ? trade : null,
+    };
+  }
+
+  return {
+    account: {
+      ...account,
+      phase,
+      history: [
+        { accountId: account.id, date, id: `event-status-${Date.now()}`, label: `Status changed to ${phase}` },
+        ...history,
+      ],
+    },
+    trade: null,
+  };
+}
+
 export async function saveSession(userId: string, session: TradeSession) {
   const { error } = await supabase.from("trading_feed_events").upsert({
     description: JSON.stringify(session),
@@ -742,6 +840,48 @@ export function createTrade(input: Omit<Trade, "id" | "createdAt" | "checklist">
     createdAt: `${input.date}T00:00:00.000Z`,
     id: `trade-${Date.now()}-${Math.round(Math.random() * 10000)}`,
   } satisfies Trade;
+}
+
+function createBlowTrade(account: Account, blowIndex: number, date: string): Trade {
+  const drawdown = Math.max(0, account.maxDrawdown || account.startingBalance);
+
+  return {
+    accountId: account.id,
+    checklist: { accountFree: true, neutral: true, setup: true },
+    createdAt: `${date}T23:59:00.000Z`,
+    date,
+    direction: "short",
+    id: getBlowTradeId(account.id, blowIndex),
+    pnl: -drawdown,
+    purchases: 0,
+    symbol: "ACCOUNT_BLOW",
+  };
+}
+
+function getBlowTradeId(accountId: string, blowIndex: number) {
+  return `trade-blow-${accountId}-${blowIndex}`;
+}
+
+function getMissingBlowTrades(accounts: Account[], trades: Trade[]) {
+  const tradeIds = new Set(trades.map((trade) => trade.id));
+
+  return accounts.flatMap((account) => {
+    const blowCount = account.blownEvaluationCount + account.blownFundedCount;
+    return Array.from({ length: blowCount }, (_, index) => {
+      const blowIndex = index + 1;
+      return tradeIds.has(getBlowTradeId(account.id, blowIndex))
+        ? null
+        : createBlowTrade(account, blowIndex, getBlowDate(account, blowIndex));
+    }).filter((trade): trade is Trade => Boolean(trade));
+  });
+}
+
+function getBlowDate(account: Account, blowIndex: number) {
+  const blownEvents = account.history
+    .filter((event) => event.label.toLowerCase().includes("blown"))
+    .sort((left, right) => left.date.localeCompare(right.date));
+
+  return blownEvents[blowIndex - 1]?.date || account.history[0]?.date || getTodayIsoDate();
 }
 
 export function getActiveQuests(quests: Quest[], date: string) {
@@ -1316,10 +1456,14 @@ function rowToAccount(
 ): Account {
   const startingBalance = numberValue(row.size_usd, 0);
   const resetTime = stringValue(row.last_reset_at) ? new Date(stringValue(row.last_reset_at)).getTime() : 0;
+  const fundedTime = stringValue(row.last_activation_at) ? new Date(stringValue(row.last_activation_at)).getTime() : 0;
+  const cycleStartTime = Math.max(resetTime, fundedTime);
   const tradePnl = relations.trades
-    .filter((trade) => new Date(trade.createdAt).getTime() >= resetTime)
+    .filter((trade) => new Date(trade.createdAt).getTime() >= cycleStartTime)
     .reduce((sum, trade) => sum + trade.pnl, 0);
-  const payoutTotal = relations.payouts.reduce((sum, payout) => sum + payout.amount, 0);
+  const payoutTotal = relations.payouts
+    .filter((payout) => new Date(`${payout.date}T00:00:00`).getTime() >= cycleStartTime)
+    .reduce((sum, payout) => sum + payout.amount, 0);
 
   return {
     activationFeesPaid: numberValue(row.activation_fees_usd, 0),
@@ -1393,6 +1537,14 @@ function phaseToStatus(phase: AccountPhase) {
   if (phase === "evaluation") return "eval";
   if (phase === "blown_eval" || phase === "blown_funded") return "blown";
   return phase;
+}
+
+function isBlownPhase(phase: AccountPhase) {
+  return phase === "blown_eval" || phase === "blown_funded";
+}
+
+function toBlownPhase(phase: AccountPhase): AccountPhase {
+  return phase === "funded" || phase === "live" || phase === "blown_funded" ? "blown_funded" : "blown_eval";
 }
 
 function statusToPhase(status: string, blownEval: number, blownFunded: number): AccountPhase {
