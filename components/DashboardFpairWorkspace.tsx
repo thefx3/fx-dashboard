@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import {
   Check,
   ChevronLeft,
@@ -171,6 +171,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   const [selectedDate, setSelectedDate] = useState(initialDate ?? today);
   const [statsRange, setStatsRange] = useState<StatsRange>("weekly");
   const [statsTab, setStatsTab] = useState<StatsTab>(mode === "stats" ? "history" : "daily");
+  const [, startStatsTransition] = useTransition();
   const [loaded, setLoaded] = useState(Boolean(initialSnapshot));
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -250,9 +251,14 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   const period = useMemo(() => getPeriod(selectedDate, statsRange), [selectedDate, statsRange]);
   const periodStats = useMemo(() => getStats(snapshot, period.from, period.to), [snapshot, period]);
   const handleStatsTabChange = useCallback((nextTab: StatsTab) => {
-    setStatsTab(nextTab);
-    if (nextTab !== "history") setStatsRange(nextTab);
-  }, []);
+    startStatsTransition(() => {
+      setStatsTab(nextTab);
+      if (nextTab !== "history") setStatsRange(nextTab);
+    });
+  }, [startStatsTransition]);
+  const handleStatsDateChange = useCallback((date: string) => {
+    startStatsTransition(() => setSelectedDate(date));
+  }, [startStatsTransition]);
 
   async function saveAccountWithTransition(nextAccount: Account) {
     const currentAccount = snapshot.accounts.find((account) => account.id === nextAccount.id);
@@ -334,7 +340,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         activeQuests={activeQuests}
         breakdown={breakdown}
         onTabChange={handleStatsTabChange}
-        onSelectedDateChange={setSelectedDate}
+        onSelectedDateChange={handleStatsDateChange}
         period={period}
         periodStats={periodStats}
         range={statsRange}
@@ -566,22 +572,20 @@ function StatsWorkspace({
   const pnlTrend = useMemo(() => buildPnlTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
   const selfCareTrend = useMemo(() => buildSelfCareTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
   const periodUnit = getStatsUnit(range);
+  const tabItems: Array<[StatsTab, string]> = [
+    ["history", "History"],
+    ["daily", "Daily"],
+    ["weekly", "Weekly"],
+    ["monthly", "Monthly"],
+    ["yearly", "Yearly"],
+  ];
+  const tabNav = <Segmented items={tabItems} value={tab} onChange={onTabChange} />;
 
   if (tab === "history") {
     return (
       <div className="grid gap-4">
         <section className="flex flex-wrap items-center justify-between gap-3">
-          <Segmented
-            items={[
-              ["history", "History"],
-              ["daily", "Daily"],
-              ["weekly", "Weekly"],
-              ["monthly", "Monthly"],
-              ["yearly", "Yearly"],
-            ]}
-            value={tab}
-            onChange={onTabChange}
-          />
+          {tabNav}
         </section>
         <CalendarHistoryDetail activeQuests={activeQuests} breakdown={breakdown} selectedDate={selectedDate} snapshot={snapshot} />
       </div>
@@ -591,17 +595,7 @@ function StatsWorkspace({
   return (
     <div className="grid gap-4">
       <section className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented
-          items={[
-            ["history", "History"],
-            ["daily", "Daily"],
-            ["weekly", "Weekly"],
-            ["monthly", "Monthly"],
-            ["yearly", "Yearly"],
-          ]}
-          value={tab}
-          onChange={onTabChange}
-        />
+        {tabNav}
         <div className="flex items-center gap-2">
           <button type="button" className="icon-button" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, -1))}>
             <ChevronLeft className="h-4 w-4" />
@@ -728,7 +722,7 @@ function SourcePieChart({ green, red, title }: { green: number; red: number; tit
       <div className="mt-3 h-36">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} dataKey="value" innerRadius="58%" outerRadius="84%" paddingAngle={hasData ? 2 : 0} stroke="none">
+            <Pie data={data} dataKey="value" innerRadius="58%" isAnimationActive={false} outerRadius="84%" paddingAngle={hasData ? 2 : 0} stroke="none">
               {data.map((item) => <Cell key={item.name} fill={item.color} />)}
             </Pie>
             <Tooltip
@@ -953,15 +947,11 @@ function buildSelfCareTrend(snapshot: FpairSnapshot, from: string, to: string, r
 function buildBuckets(from: string, to: string, range: StatsRange) {
   const dates = enumerateDates(from, to);
   if (range === "daily") {
-    return [{ from, label: formatWeekday(from).slice(0, 3), to }];
-  }
-
-  if (range === "weekly") {
     const weekdayLabels = ["M", "T", "W", "T", "F", "S", "S"];
     return dates.slice(0, 7).map((date, index) => ({ from: date, label: weekdayLabels[index] ?? formatWeekday(date).slice(0, 1), to: date }));
   }
 
-  if (range === "monthly") {
+  if (range === "weekly") {
     return chunkDatesIntoCount(dates, 5).map((bucket, index) => ({
       from: bucket[0],
       label: `W${index + 1}`,
@@ -969,12 +959,20 @@ function buildBuckets(from: string, to: string, range: StatsRange) {
     }));
   }
 
-  const year = Number(from.slice(0, 4));
-  return Array.from({ length: 12 }, (_, index) => {
-    const date = new Date(year, index, 1);
-    const start = toIsoDate(date);
-    const end = toIsoDate(new Date(year, index + 1, 0));
-    return { from: start, label: monthInitials[index], to: end };
+  if (range === "monthly") {
+    const year = Number(from.slice(0, 4));
+    return Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(year, index, 1);
+      const start = toIsoDate(date);
+      const end = toIsoDate(new Date(year, index + 1, 0));
+      return { from: start, label: monthInitials[index], to: end };
+    });
+  }
+
+  const startYear = Number(from.slice(0, 4));
+  return Array.from({ length: 5 }, (_, index) => {
+    const year = startYear + index;
+    return { from: `${year}-01-01`, label: `Y${index + 1}`, to: `${year}-12-31` };
   });
 }
 
@@ -992,24 +990,25 @@ function getPeriod(date: string, range: StatsRange) {
   const parsed = new Date(`${date}T00:00:00`);
 
   if (range === "daily") {
-    const day = toIsoDate(parsed);
-    return { from: day, to: day };
-  }
-
-  if (range === "weekly") {
     const mondayOffset = (parsed.getDay() + 6) % 7;
     parsed.setDate(parsed.getDate() - mondayOffset);
     return { from: toIsoDate(parsed), to: shiftDate(toIsoDate(parsed), 6) };
   }
 
-  if (range === "monthly") {
+  if (range === "weekly") {
     const from = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-01`;
     const to = toIsoDate(new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0));
     return { from, to };
   }
 
+  if (range === "monthly") {
+    const year = parsed.getFullYear();
+    return { from: `${year}-01-01`, to: `${year}-12-31` };
+  }
+
   const year = parsed.getFullYear();
-  return { from: `${year}-01-01`, to: `${year}-12-31` };
+  const startYear = year - (year % 5);
+  return { from: `${startYear}-01-01`, to: `${startYear + 4}-12-31` };
 }
 
 function getGroupedStats(snapshot: FpairSnapshot, from: string, to: string, range: StatsRange) {
@@ -1037,17 +1036,17 @@ function getGroupedStats(snapshot: FpairSnapshot, from: string, to: string, rang
 
 function getStatsUnit(range: StatsRange) {
   if (range === "daily") return "day";
-  if (range === "weekly") return "day";
-  if (range === "monthly") return "week";
-  return "month";
+  if (range === "weekly") return "week";
+  if (range === "monthly") return "month";
+  return "year";
 }
 
 function shiftPeriod(date: string, range: StatsRange, offset: number) {
   const parsed = new Date(`${date}T00:00:00`);
-  if (range === "daily") parsed.setDate(parsed.getDate() + offset);
-  if (range === "weekly") parsed.setDate(parsed.getDate() + offset * 7);
-  if (range === "monthly") parsed.setMonth(parsed.getMonth() + offset);
-  if (range === "yearly") parsed.setFullYear(parsed.getFullYear() + offset);
+  if (range === "daily") parsed.setDate(parsed.getDate() + offset * 7);
+  if (range === "weekly") parsed.setMonth(parsed.getMonth() + offset);
+  if (range === "monthly") parsed.setFullYear(parsed.getFullYear() + offset);
+  if (range === "yearly") parsed.setFullYear(parsed.getFullYear() + offset * 5);
   return toIsoDate(parsed);
 }
 
@@ -1096,8 +1095,8 @@ function JournalQuestsWorkspace({
           <Segmented
             items={[
               ["journal", "Journal"],
-              ["diary", "Diary"],
               ["quests", "Quests"],
+              ["diary", "Diary"],
               ["library", "Library"],
               ["planned", "Planned"],
             ]}
@@ -1503,7 +1502,7 @@ function CalendarHistoryDetail({
         <ScoreBox title="Journal" green={breakdown.journal.green} red={breakdown.journal.red} />
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2">
+      <div className="mt-6 grid gap-4 xl:grid-cols-3">
         <div className="fp-panel p-4">
           <p className="text-sm font-semibold">Quests</p>
           <div className="mt-3 grid gap-2">
@@ -1543,10 +1542,23 @@ function CalendarHistoryDetail({
             {!entry?.wants.length && !entry?.activities.length ? <EmptyState text="No journal data for this day." /> : null}
           </div>
         </div>
+        <DayTradeHistory trades={trades} />
       </div>
+    </div>
+  );
+}
 
-      <div className="mt-4 grid gap-4">
-        <TradeHistory trades={trades} title="Trades of the day" />
+function DayTradeHistory({ trades }: { trades: FpairSnapshot["trades"] }) {
+  return (
+    <div className="fp-panel p-4">
+      <p className="text-sm font-semibold">History</p>
+      <div className="mt-3 grid gap-2">
+        {trades.length ? trades.slice(0, 14).map((trade) => (
+          <div key={trade.id} className="grid grid-cols-[1fr_auto] border border-site bg-site p-3 text-sm">
+            <span>{trade.symbol} / {trade.direction}</span>
+            <span className={cn("font-semibold", trade.pnl < 0 ? "text-red-700" : "text-emerald-700")}>{formatMoney(trade.pnl)}</span>
+          </div>
+        )) : <EmptyState text="No trade for this day." />}
       </div>
     </div>
   );
@@ -2257,7 +2269,9 @@ function Segmented<T extends string>({
           key={itemValue}
           type="button"
           className={cn("px-3 py-2 text-sm font-semibold transition", value === itemValue ? "bg-ink text-white" : "text-site-muted hover:text-site")}
-          onClick={() => onChange(itemValue)}
+          onClick={() => {
+            if (value !== itemValue) onChange(itemValue);
+          }}
         >
           {label}
         </button>

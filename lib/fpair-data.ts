@@ -293,8 +293,8 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
           trades: loadedTrades.filter((trade) => trade.accountId === row.id),
         }),
       );
-  const missingBlowTrades = getMissingBlowTrades(loadedAccounts, loadedTrades);
-  const trades = [...missingBlowTrades, ...loadedTrades];
+  const blowTrades = normalizeBlowTrades(loadedAccounts, loadedTrades);
+  const trades = blowTrades.trades;
   const accounts = accountRows.error
     ? []
     : (accountRows.data ?? []).map((row) =>
@@ -321,8 +321,8 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
     trades,
   };
 
-  if (missingBlowTrades.length) {
-    await Promise.all(missingBlowTrades.map((trade) => saveTrade(userId, trade))).catch(() => undefined);
+  if (blowTrades.changedTrades.length) {
+    await Promise.all(blowTrades.changedTrades.map((trade) => saveTrade(userId, trade))).catch(() => undefined);
   }
 
   if (!questResultRows.error) {
@@ -842,8 +842,16 @@ export function createTrade(input: Omit<Trade, "id" | "createdAt" | "checklist">
   } satisfies Trade;
 }
 
-function createBlowTrade(account: Account, blowIndex: number, date: string): Trade {
-  const drawdown = Math.max(0, account.maxDrawdown || account.startingBalance);
+const accountBlowSymbol = "ACCOUNT_BLOW";
+const defaultDrawdownsBySize: Record<number, number> = {
+  25000: 1000,
+  50000: 2000,
+  100000: 3000,
+  150000: 4500,
+};
+
+function createBlowTrade(account: Account, blowIndex: number, date: string, balanceBeforeBlow = account.balance): Trade {
+  const pnl = calculateBlowPnl(account, balanceBeforeBlow);
 
   return {
     accountId: account.id,
@@ -852,28 +860,82 @@ function createBlowTrade(account: Account, blowIndex: number, date: string): Tra
     date,
     direction: "short",
     id: getBlowTradeId(account.id, blowIndex),
-    pnl: -drawdown,
+    pnl,
     purchases: 0,
-    symbol: "ACCOUNT_BLOW",
+    symbol: accountBlowSymbol,
   };
+}
+
+function calculateBlowPnl(account: Account, balanceBeforeBlow: number) {
+  const drawdown = getAccountDrawdown(account);
+  const liquidationBalance = account.startingBalance - drawdown;
+  return Math.min(0, liquidationBalance - balanceBeforeBlow);
+}
+
+function getAccountDrawdown(account: Account) {
+  return Math.max(0, account.maxDrawdown || defaultDrawdownsBySize[account.startingBalance] || 0);
 }
 
 function getBlowTradeId(accountId: string, blowIndex: number) {
   return `trade-blow-${accountId}-${blowIndex}`;
 }
 
-function getMissingBlowTrades(accounts: Account[], trades: Trade[]) {
-  const tradeIds = new Set(trades.map((trade) => trade.id));
+function normalizeBlowTrades(accounts: Account[], trades: Trade[]) {
+  const tradeById = new Map(trades.map((trade) => [trade.id, trade]));
+  const updates = new Map<string, Trade>();
+  const additions: Trade[] = [];
 
-  return accounts.flatMap((account) => {
+  accounts.forEach((account) => {
     const blowCount = account.blownEvaluationCount + account.blownFundedCount;
-    return Array.from({ length: blowCount }, (_, index) => {
+    Array.from({ length: blowCount }, (_, index) => {
       const blowIndex = index + 1;
-      return tradeIds.has(getBlowTradeId(account.id, blowIndex))
-        ? null
-        : createBlowTrade(account, blowIndex, getBlowDate(account, blowIndex));
-    }).filter((trade): trade is Trade => Boolean(trade));
+      const id = getBlowTradeId(account.id, blowIndex);
+      const date = getBlowDate(account, blowIndex);
+      const expected = createBlowTrade(account, blowIndex, date, getBalanceBeforeBlow(account, trades, date));
+      const existing = tradeById.get(id);
+
+      if (!existing) {
+        additions.push(expected);
+        return;
+      }
+
+      if (existing.symbol === accountBlowSymbol && Math.abs(existing.pnl - expected.pnl) > 0.01) {
+        updates.set(id, { ...existing, pnl: expected.pnl });
+      }
+    });
   });
+
+  return {
+    changedTrades: [...additions, ...updates.values()],
+    trades: [...additions, ...trades.map((trade) => updates.get(trade.id) ?? trade)],
+  };
+}
+
+function getBalanceBeforeBlow(account: Account, trades: Trade[], blowDate: string) {
+  const cycleStartTime = getCycleStartTime(account);
+  const blowEndTime = new Date(`${blowDate}T23:59:59.999Z`).getTime();
+  const tradePnl = trades
+    .filter((trade) => trade.accountId === account.id)
+    .filter((trade) => trade.symbol !== accountBlowSymbol)
+    .filter((trade) => {
+      const tradeTime = new Date(trade.createdAt || `${trade.date}T00:00:00.000Z`).getTime();
+      return tradeTime >= cycleStartTime && tradeTime <= blowEndTime;
+    })
+    .reduce((sum, trade) => sum + trade.pnl, 0);
+  const payoutTotal = account.payouts
+    .filter((payout) => {
+      const payoutTime = new Date(`${payout.date}T00:00:00`).getTime();
+      return payoutTime >= cycleStartTime && payoutTime <= blowEndTime;
+    })
+    .reduce((sum, payout) => sum + payout.amount, 0);
+
+  return account.startingBalance + tradePnl - payoutTotal;
+}
+
+function getCycleStartTime(account: Account) {
+  const resetTime = account.lastResetAt ? new Date(account.lastResetAt).getTime() : 0;
+  const fundedTime = account.fundedAt ? new Date(account.fundedAt).getTime() : 0;
+  return Math.max(resetTime, fundedTime);
 }
 
 function getBlowDate(account: Account, blowIndex: number) {
