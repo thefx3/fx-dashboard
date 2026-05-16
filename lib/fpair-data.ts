@@ -970,24 +970,8 @@ export function getLevelProgress(snapshot: FpairSnapshot): LevelProgress {
 
   const calculatedSignals = calculated.green + calculated.red;
   const storedSignals = stored.green + stored.red;
-  if (calculatedSignals >= storedSignals && calculated.level >= stored.level) {
-    return calculated;
-  }
-
   const storedCalculated = getLevelProgressFromCounts(stored.green, stored.red);
-  const merged = storedSignals > calculatedSignals ? storedCalculated : calculated;
-  if (stored.level <= merged.level) return merged;
-
-  const level = Math.max(1, Math.min(maxLevel, stored.level));
-  const nextLevel = level >= maxLevel ? null : level + 1;
-
-  return {
-    ...merged,
-    level,
-    nextLevel,
-    nextLevelScore: nextLevel ? getLevelScoreTarget(nextLevel) : getLevelScoreTarget(maxLevel),
-    progress: Math.max(0, Math.min(100, stored.progress || merged.progress)),
-  };
+  return storedSignals > calculatedSignals ? storedCalculated : calculated;
 }
 
 function getCalculatedLevelProgress(snapshot: FpairSnapshot): LevelProgress {
@@ -1101,7 +1085,7 @@ function getAutoQuestStatus(quest: Quest, rawValue: unknown, targetLevel: number
 }
 
 export function getStats(snapshot: FpairSnapshot, from: string, to: string) {
-  const days = enumerateDates(from, to);
+  const days = enumerateDates(from, to).filter((date) => !snapshot.settings.startDate || date >= snapshot.settings.startDate);
   const targetLevel = getLevelProgress(snapshot).level;
   const totals = days.reduce(
     (acc, date) => {
