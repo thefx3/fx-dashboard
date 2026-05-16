@@ -3,11 +3,11 @@
 :root {
   --site: #f6f3ee;
   --site-foreground: #121212;
-  --site-muted: rgba(18, 18, 18, 0.58);
+  --site-muted: #514a43;
   --site-border: rgba(18, 18, 18, 0.12);
   --site-panel: #fffdf8;
   --ink: #121212;
-  --brand: #9a784d;
+  --brand: #6f4d26;
   --brand-soft: #ebe2d4;
 
   --background: var(--site);

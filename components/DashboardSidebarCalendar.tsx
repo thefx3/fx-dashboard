@@ -92,7 +92,7 @@ export default function DashboardSidebarCalendar({
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[0.62rem] font-semibold uppercase text-white/[0.38]">
+      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[0.62rem] font-semibold uppercase text-white/[0.72]">
         {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
           <span key={`${day}-${index}`}>{day}</span>
         ))}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import AccessibilityGuard from "@/components/AccessibilityGuard";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 
 const inter = Inter({
@@ -46,6 +47,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <AccessibilityGuard />
           {children}
         </ThemeProvider>
       </body>

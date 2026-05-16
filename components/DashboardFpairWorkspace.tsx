@@ -368,7 +368,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         <div className="surface-dark flex min-h-[260px] flex-col p-6 sm:p-8">
           <div className="flex items-start justify-between gap-6">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.22em] text-white/[0.5]">Profile</p>
+              <p className="text-sm font-medium uppercase tracking-[0.22em] text-white/[0.78]">Profile</p>
               <h2 className="mt-4 text-5xl font-semibold tracking-tight">LV .{progress.level}</h2>
             </div>
           </div>
@@ -1376,7 +1376,7 @@ function ListsWorkspace({
         <span className={cn("block font-semibold leading-5", item.completed && "line-through opacity-60")}>{item.title}</span>
         {item.detail ? <span className="mt-0.5 block text-xs leading-5 text-site-muted">{item.detail}</span> : null}
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="mr-auto text-[0.64rem] font-semibold uppercase tracking-[0.1em] text-site-muted/60">
+          <span className="mr-auto text-[0.64rem] font-semibold uppercase tracking-[0.1em] text-site-muted">
             Added {formatShortDate(item.createdAt.slice(0, 10))}
           </span>
           <button

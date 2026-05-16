@@ -174,7 +174,7 @@ function DashboardSidebar({
       <DashboardSidebarCalendar activeView={activeView} selectedDate={journalDate} today={today} />
 
       <div className="mt-8 border-t border-white/[0.12] pt-4">
-        <p className="px-3 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-white/[0.38]">
+        <p className="px-3 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-white/[0.72]">
           Public
         </p>
         <Link
