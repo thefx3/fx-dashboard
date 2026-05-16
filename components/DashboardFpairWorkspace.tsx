@@ -581,12 +581,24 @@ function StatsWorkspace({
     ["yearly", "Yearly"],
   ];
   const tabNav = <Segmented items={tabItems} value={tab} onChange={onTabChange} />;
+  const periodControls = (
+    <div className="flex w-full items-center gap-2 sm:w-auto lg:justify-self-end">
+      <button type="button" className="icon-button" aria-label="Previous period" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, -1))}>
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <span className="min-w-[15.5rem] border border-site bg-card px-3 py-2 text-center text-sm font-semibold text-site-muted">{period.from} to {period.to}</span>
+      <button type="button" className="icon-button" aria-label="Next period" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, 1))}>
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
 
   if (tab === "history") {
     return (
       <div className="grid gap-4">
-        <section className="flex flex-wrap items-center justify-between gap-3">
-          {tabNav}
+        <section className="grid min-h-11 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="min-w-0">{tabNav}</div>
+          <div className="hidden min-h-11 w-[23rem] lg:block" aria-hidden="true" />
         </section>
         <CalendarHistoryDetail activeQuests={activeQuests} breakdown={breakdown} selectedDate={selectedDate} snapshot={snapshot} />
       </div>
@@ -595,17 +607,9 @@ function StatsWorkspace({
 
   return (
     <div className="grid gap-4">
-      <section className="flex flex-wrap items-center justify-between gap-3">
-        {tabNav}
-        <div className="flex items-center gap-2">
-          <button type="button" className="icon-button" aria-label="Previous period" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, -1))}>
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="border border-site bg-card px-3 py-2 text-sm font-semibold text-site-muted">{period.from} to {period.to}</span>
-          <button type="button" className="icon-button" aria-label="Next period" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, 1))}>
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+      <section className="grid min-h-11 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0">{tabNav}</div>
+        {periodControls}
       </section>
       <section className="grid gap-4 xl:grid-cols-2">
         <div className="surface p-6 sm:p-8">
@@ -1585,7 +1589,7 @@ function CalendarHistoryDetail({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-semibold">{formatLongDate(selectedDate)}</h2>
-          <span className="border border-[#1f6feb] bg-[#1f6feb]/10 px-3 py-1 text-sm font-semibold text-[#1f6feb]">
+          <span className="border border-[#0f4fa8] bg-[#0f4fa8]/10 px-3 py-1 text-sm font-semibold text-[#0f4fa8]">
             Streak {streak}
           </span>
         </div>
