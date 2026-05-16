@@ -40,6 +40,7 @@ import {
   formatMoneyCompact,
   getActiveQuests,
   getDayBreakdown,
+  getDayBreakdownForLevel,
   getLatestFpairSnapshot,
   getLevelProgress,
   getQuestStatus,
@@ -249,7 +250,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   const activeQuests = useMemo(() => getActiveQuests(snapshot.quests, selectedDate), [snapshot.quests, selectedDate]);
   const tradingStats = useMemo(() => getTradingStats(snapshot), [snapshot]);
   const period = useMemo(() => getPeriod(selectedDate, statsRange), [selectedDate, statsRange]);
-  const periodStats = useMemo(() => getStats(snapshot, period.from, period.to), [snapshot, period]);
+  const periodStats = useMemo(() => mode === "overview" ? getStats(snapshot, period.from, period.to) : emptyPeriodStats(), [mode, period.from, period.to, snapshot]);
   const handleStatsTabChange = useCallback((nextTab: StatsTab) => {
     startStatsTransition(() => {
       setStatsTab(nextTab);
@@ -342,7 +343,6 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         onTabChange={handleStatsTabChange}
         onSelectedDateChange={handleStatsDateChange}
         period={period}
-        periodStats={periodStats}
         range={statsRange}
         selectedDate={selectedDate}
         snapshot={snapshot}
@@ -392,8 +392,8 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
           <div className="mt-auto grid grid-cols-2 gap-3">
             <SmallStat label="Green" value={breakdown.green} tone="green" />
             <SmallStat label="Red" value={breakdown.red} tone="red" />
-            <SmallStat label="Ratio" value={breakdown.score} tone={breakdown.score < 0 ? "red" : "green"} />
-            <SmallStat label="Conversion" value={`${breakdown.conversion}%`} />
+            <SmallStat label="Score" value={breakdown.score} tone={breakdown.score < 0 ? "red" : "green"} />
+            <SmallStat label="Ratio" value={formatRoundedNumber(getGreenRedRatio(breakdown.green, breakdown.red))} tone={getGreenRedRatio(breakdown.green, breakdown.red) < 1 ? "red" : "green"} />
           </div>
         </div>
 
@@ -403,11 +403,11 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
       <section className="grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
         <Metric label="Total green" value={periodStats.green} />
         <Metric label="Total red" value={periodStats.red} tone="red" />
-        <Metric label="Ratio" value={periodStats.ratio} tone={periodStats.ratio < 0 ? "red" : "green"} />
+        <Metric label="Ratio" value={formatRoundedNumber(periodStats.ratio)} tone={periodStats.ratio < 1 ? "red" : "green"} />
         <Metric label="Clean streak" value={periodStats.cleanDays} />
         <Metric label="Avg green/day" value={periodStats.avgGreenPerDay.toFixed(1)} />
         <Metric label="Avg red/day" value={periodStats.avgRedPerDay.toFixed(1)} tone="red" />
-        <Metric label="Avg ratio/day" value={periodStats.avgRatioPerDay.toFixed(1)} />
+        <Metric label="Avg ratio/day" value={formatRoundedNumber(periodStats.avgRatioPerDay)} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -549,7 +549,6 @@ function StatsWorkspace({
   onTabChange,
   onSelectedDateChange,
   period,
-  periodStats,
   range,
   selectedDate,
   snapshot,
@@ -560,17 +559,19 @@ function StatsWorkspace({
   onTabChange: (tab: StatsTab) => void;
   onSelectedDateChange: (date: string) => void;
   period: { from: string; to: string };
-  periodStats: ReturnType<typeof getStats>;
   range: StatsRange;
   selectedDate: string;
   snapshot: FpairSnapshot;
   tab: StatsTab;
 }) {
-  const summary = useMemo(() => buildStatsSummary(snapshot, period.from, period.to), [period.from, period.to, snapshot]);
-  const statusStats = useMemo(() => getGroupedStats(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
-  const ratioTrend = useMemo(() => buildStatusTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
-  const pnlTrend = useMemo(() => buildPnlTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
-  const selfCareTrend = useMemo(() => buildSelfCareTrend(snapshot, period.from, period.to, range), [period.from, period.to, range, snapshot]);
+  const targetLevel = useMemo(() => getLevelProgress(snapshot).level, [snapshot]);
+  const buckets = useMemo(() => buildBuckets(period.from, period.to, range), [period.from, period.to, range]);
+  const breakdowns = useMemo(() => buildBreakdownCache(snapshot, buckets, targetLevel), [buckets, snapshot, targetLevel]);
+  const summary = useMemo(() => buildStatsSummary(snapshot, period.from, period.to, breakdowns), [breakdowns, period.from, period.to, snapshot]);
+  const statusStats = useMemo(() => getGroupedStats(buckets, breakdowns), [breakdowns, buckets]);
+  const ratioTrend = useMemo(() => buildStatusTrend(buckets, breakdowns), [breakdowns, buckets]);
+  const pnlTrend = useMemo(() => buildPnlTrend(snapshot, buckets), [buckets, snapshot]);
+  const selfCareTrend = useMemo(() => buildSelfCareTrend(snapshot, buckets), [buckets, snapshot]);
   const periodUnit = getStatsUnit(range);
   const tabItems: Array<[StatsTab, string]> = [
     ["history", "History"],
@@ -610,21 +611,21 @@ function StatsWorkspace({
         <div className="surface p-6 sm:p-8">
           <p className="eyebrow">Status</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            <Metric label="Total green" value={periodStats.green} />
-            <Metric label="Total red" value={periodStats.red} tone="red" />
-            <Metric label="Ratio" value={periodStats.ratio} tone={periodStats.ratio < 0 ? "red" : "green"} />
+            <Metric label="Total green" value={statusStats.green} />
+            <Metric label="Total red" value={statusStats.red} tone="red" />
+            <Metric label="Ratio" value={formatRoundedNumber(statusStats.ratio)} tone={statusStats.ratio < 1 ? "red" : "green"} />
             <Metric label="Clean streak" value={statusStats.cleanPeriods} />
-            <Metric label={`Avg green/${periodUnit}`} value={statusStats.avgGreen.toFixed(1)} />
-            <Metric label={`Avg red/${periodUnit}`} value={statusStats.avgRed.toFixed(1)} tone="red" />
-            <Metric label={`Avg ratio/${periodUnit}`} value={statusStats.avgRatio.toFixed(1)} />
+            <Metric label={`Avg green/${periodUnit}`} value={formatRoundedNumber(statusStats.avgGreen)} />
+            <Metric label={`Avg red/${periodUnit}`} value={formatRoundedNumber(statusStats.avgRed)} tone="red" />
+            <Metric label={`Avg ratio/${periodUnit}`} value={formatRoundedNumber(statusStats.avgRatio)} />
           </div>
         </div>
         <div className="surface p-6 sm:p-8">
           <p className="eyebrow">Self-care</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <Metric label="Avg sleep" value={`${summary.selfCare.avgSleepHours.toFixed(1)}h`} />
-            <Metric label="Avg screen time" value={`${summary.selfCare.avgScreenHours.toFixed(1)}h`} tone={summary.selfCare.avgScreenHours > snapshot.profile.screenTimeRedMinutes / 60 ? "red" : "green"} />
-            <Metric label="Avg run" value={`${summary.selfCare.avgRunKm.toFixed(1)} km`} />
+            <Metric label="Avg sleep" value={formatDurationHours(summary.selfCare.avgSleepHours)} />
+            <Metric label="Avg screen time" value={formatDurationHours(summary.selfCare.avgScreenHours)} tone={summary.selfCare.avgScreenHours > snapshot.profile.screenTimeRedMinutes / 60 ? "red" : "green"} />
+            <Metric label="Avg run" value={`${formatRoundedNumber(summary.selfCare.avgRunKm)} km`} />
             <Metric label="Avg calories" value={`${Math.round(summary.selfCare.avgCalories)} kcal`} />
           </div>
         </div>
@@ -653,9 +654,9 @@ function StatsWorkspace({
           title="Ratio evolution"
           eyebrow="Curve"
           series={[
-            { color: "#a4772b", key: "ratio", label: "Ratio" },
-            { color: "#047857", key: "green", label: "Green" },
-            { color: "#b91c1c", key: "red", label: "Red" },
+            { color: "#a4772b", formatValue: formatRoundedNumber, key: "ratio", label: "Ratio" },
+            { color: "#047857", formatValue: formatRoundedNumber, key: "green", label: "Green" },
+            { color: "#b91c1c", formatValue: formatRoundedNumber, key: "red", label: "Red" },
           ]}
           points={ratioTrend}
         />
@@ -663,8 +664,8 @@ function StatsWorkspace({
           title="P&L evolution"
           eyebrow="Curve"
           series={[
-            { color: "#a4772b", key: "pnl", label: "Period P&L" },
-            { color: "#047857", key: "cumulative", label: "Cumulative P&L" },
+            { color: "#a4772b", formatValue: formatMoney, key: "pnl", label: "Period P&L" },
+            { color: "#047857", formatValue: formatMoney, key: "cumulative", label: "Cumulative P&L" },
           ]}
           points={pnlTrend}
         />
@@ -672,10 +673,10 @@ function StatsWorkspace({
           title="Self-care evolution"
           eyebrow="Curve"
           series={[
-            { color: "#3A6EA5", key: "sleep", label: "Sleep" },
-            { color: "#b91c1c", key: "screen", label: "Screen" },
-            { color: "#047857", key: "run", label: "Run" },
-            { color: "#a4772b", key: "calories", label: "Calories / 1000" },
+            { color: "#3A6EA5", formatValue: formatDurationHours, key: "sleep", label: "Avg sleep" },
+            { color: "#b91c1c", formatValue: formatDurationHours, key: "screen", label: "Avg screen" },
+            { color: "#047857", formatValue: (value) => `${formatRoundedNumber(value)} km`, key: "run", label: "Avg run" },
+            { color: "#a4772b", formatValue: (value) => `${Math.round(value * 1000)} kcal`, key: "calories", label: "Avg calories" },
           ]}
           points={selfCareTrend}
         />
@@ -691,12 +692,13 @@ type ChartPoint = {
 
 type ChartSeries = {
   color: string;
+  formatValue?: (value: number) => string;
   key: string;
   label: string;
 };
 
 function SourcePieChart({ green, red, title }: { green: number; red: number; title: string }) {
-  const ratio = green - red;
+  const ratio = getGreenRedRatio(green, red);
   const hasData = green + red > 0;
   const data = hasData
     ? [
@@ -710,8 +712,8 @@ function SourcePieChart({ green, red, title }: { green: number; red: number; tit
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">{title}</p>
-          <p className={cn("mt-1 text-xs font-semibold uppercase tracking-[0.12em]", ratio < 0 ? "text-red-700" : "text-emerald-700")}>
-            Ratio {ratio}
+          <p className={cn("mt-1 text-xs font-semibold uppercase tracking-[0.12em]", ratio < 1 ? "text-red-700" : "text-emerald-700")}>
+            Ratio {formatRoundedNumber(ratio)}
           </p>
         </div>
         <div className="text-right text-xs font-semibold text-site-muted">
@@ -802,6 +804,12 @@ function StatsTrendChart({ points, series }: { points: ChartPoint[]; series: Cha
           />
           <Tooltip
             cursor={{ stroke: "rgba(28,28,27,0.16)", strokeWidth: 1 }}
+            formatter={(value, name, item) => {
+              const dataKey = String((item as { dataKey?: unknown }).dataKey ?? "");
+              const chartSeries = series.find((seriesItem) => seriesItem.key === dataKey);
+              const numericValue = numericChartValue(value as number | string | undefined);
+              return [chartSeries?.formatValue ? chartSeries.formatValue(numericValue) : formatRoundedNumber(numericValue), chartSeries?.label ?? name];
+            }}
             labelFormatter={(value) => chartData[Number(value)]?.xLabel ?? String(value)}
             contentStyle={{
               background: "rgb(250,248,244)",
@@ -837,7 +845,95 @@ function numericChartValue(value: number | string | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function buildStatsSummary(snapshot: FpairSnapshot, from: string, to: string) {
+function formatRoundedNumber(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function getGreenRedRatio(green: number, red: number) {
+  if (red === 0) return green > 0 ? green : 0;
+  return green / red;
+}
+
+function formatDurationHours(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0h00min";
+  const totalMinutes = Math.round(value * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h${String(minutes).padStart(2, "0")}min`;
+}
+
+type CachedBreakdowns = Map<string, ReturnType<typeof getDayBreakdown>>;
+
+function buildBreakdownCache(snapshot: FpairSnapshot, buckets: Array<{ from: string; to: string }>, targetLevel: number): CachedBreakdowns {
+  const cache: CachedBreakdowns = new Map();
+
+  buckets.forEach((bucket) => {
+    enumerateDates(bucket.from, bucket.to).forEach((date) => {
+      if (!cache.has(date)) {
+        cache.set(date, snapshot.settings.startDate && date < snapshot.settings.startDate ? emptyBreakdownValue() : getDayBreakdownForLevel(snapshot, date, targetLevel));
+      }
+    });
+  });
+
+  return cache;
+}
+
+function emptyBreakdownValue(): ReturnType<typeof getDayBreakdown> {
+  return {
+    conversion: 0,
+    green: 0,
+    journal: { green: 0, red: 0 },
+    quests: { green: 0, red: 0 },
+    red: 0,
+    score: 0,
+    selfCare: { calories: null, green: 0, red: 0, run: null, screen: null, sleep: null },
+  };
+}
+
+function emptyPeriodStats(): ReturnType<typeof getStats> {
+  return {
+    avgGreenPerDay: 0,
+    avgRatioPerDay: 0,
+    avgRedPerDay: 0,
+    cleanDays: 0,
+    conversion: 0,
+    green: 0,
+    ratio: 0,
+    red: 0,
+  };
+}
+
+function getCachedBreakdown(cache: CachedBreakdowns, date: string) {
+  return cache.get(date) ?? emptyBreakdownValue();
+}
+
+function getCachedStats(cache: CachedBreakdowns, from: string, to: string) {
+  const stats = enumerateDates(from, to).reduce(
+    (acc, date) => {
+      const breakdown = getCachedBreakdown(cache, date);
+      acc.green += breakdown.green;
+      acc.red += breakdown.red;
+      acc.ratioTotal += getGreenRedRatio(breakdown.green, breakdown.red);
+      acc.dayCount += 1;
+      if (breakdown.green > breakdown.red) acc.cleanPeriods += 1;
+      return acc;
+    },
+    { cleanPeriods: 0, dayCount: 0, green: 0, ratioTotal: 0, red: 0 },
+  );
+
+  return {
+    cleanPeriods: stats.cleanPeriods,
+    dayCount: stats.dayCount,
+    green: stats.green,
+    ratio: getGreenRedRatio(stats.green, stats.red),
+    ratioTotal: stats.ratioTotal,
+    red: stats.red,
+  };
+}
+
+function buildStatsSummary(snapshot: FpairSnapshot, from: string, to: string, breakdowns: CachedBreakdowns) {
   const dates = enumerateDates(from, to);
   const divisor = Math.max(1, dates.length);
   const selfCare = dates.reduce(
@@ -858,7 +954,7 @@ function buildStatsSummary(snapshot: FpairSnapshot, from: string, to: string) {
   );
   const sources = dates.reduce(
     (acc, date) => {
-      const breakdown = getDayBreakdown(snapshot, date);
+      const breakdown = getCachedBreakdown(breakdowns, date);
       acc.journal.green += breakdown.journal.green;
       acc.journal.red += breakdown.journal.red;
       acc.quests.green += breakdown.quests.green;
@@ -897,16 +993,16 @@ function buildStatsSummary(snapshot: FpairSnapshot, from: string, to: string) {
   };
 }
 
-function buildStatusTrend(snapshot: FpairSnapshot, from: string, to: string, range: StatsRange): ChartPoint[] {
-  return buildBuckets(from, to, range).map((bucket) => {
-    const stats = getStats(snapshot, bucket.from, bucket.to);
+function buildStatusTrend(buckets: Array<{ from: string; label: string; to: string }>, breakdowns: CachedBreakdowns): ChartPoint[] {
+  return buckets.map((bucket) => {
+    const stats = getCachedStats(breakdowns, bucket.from, bucket.to);
     return { green: stats.green, label: bucket.label, ratio: stats.ratio, red: stats.red };
   });
 }
 
-function buildPnlTrend(snapshot: FpairSnapshot, from: string, to: string, range: StatsRange): ChartPoint[] {
+function buildPnlTrend(snapshot: FpairSnapshot, buckets: Array<{ from: string; label: string; to: string }>): ChartPoint[] {
   let cumulative = 0;
-  return buildBuckets(from, to, range).map((bucket) => {
+  return buckets.map((bucket) => {
     const pnl = snapshot.trades
       .filter((trade) => trade.date >= bucket.from && trade.date <= bucket.to)
       .reduce((sum, trade) => sum + trade.pnl, 0);
@@ -915,8 +1011,8 @@ function buildPnlTrend(snapshot: FpairSnapshot, from: string, to: string, range:
   });
 }
 
-function buildSelfCareTrend(snapshot: FpairSnapshot, from: string, to: string, range: StatsRange): ChartPoint[] {
-  return buildBuckets(from, to, range).map((bucket) => {
+function buildSelfCareTrend(snapshot: FpairSnapshot, buckets: Array<{ from: string; label: string; to: string }>): ChartPoint[] {
+  return buckets.map((bucket) => {
     const days = enumerateDates(bucket.from, bucket.to);
     const totals = days.reduce(
       (acc, date) => {
@@ -1011,25 +1107,27 @@ function getPeriod(date: string, range: StatsRange) {
   return { from: `${startYear}-01-01`, to: `${startYear + 4}-12-31` };
 }
 
-function getGroupedStats(snapshot: FpairSnapshot, from: string, to: string, range: StatsRange) {
-  const buckets = buildBuckets(from, to, range);
-  const bucketStats = buckets.map((bucket) => getStats(snapshot, bucket.from, bucket.to));
+function getGroupedStats(buckets: Array<{ from: string; to: string }>, breakdowns: CachedBreakdowns) {
+  const bucketStats = buckets.map((bucket) => getCachedStats(breakdowns, bucket.from, bucket.to));
   const totals = bucketStats.reduce(
     (acc, stats) => {
       acc.cleanPeriods += stats.green > stats.red ? 1 : 0;
       acc.green += stats.green;
-      acc.ratio += stats.ratio;
+      acc.ratioTotal += stats.ratio;
       acc.red += stats.red;
       return acc;
     },
-    { cleanPeriods: 0, green: 0, ratio: 0, red: 0 },
+    { cleanPeriods: 0, green: 0, ratioTotal: 0, red: 0 },
   );
   const divisor = Math.max(1, buckets.length);
 
   return {
-    ...totals,
+    cleanPeriods: totals.cleanPeriods,
+    green: totals.green,
+    ratio: getGreenRedRatio(totals.green, totals.red),
+    red: totals.red,
     avgGreen: totals.green / divisor,
-    avgRatio: totals.ratio / divisor,
+    avgRatio: totals.ratioTotal / divisor,
     avgRed: totals.red / divisor,
   };
 }
@@ -1489,10 +1587,11 @@ function CalendarHistoryDetail({
             Streak {streak}
           </span>
         </div>
-        <div className="grid grid-cols-3 border border-site bg-site text-center text-sm">
+        <div className="grid grid-cols-4 border border-site bg-site text-center text-sm">
           <HeaderStat label="Green" value={breakdown.green} />
           <HeaderStat label="Red" value={breakdown.red} tone="red" />
-          <HeaderStat label="Conversion" value={`${breakdown.conversion}%`} />
+          <HeaderStat label="Score" value={breakdown.score} tone={breakdown.score < 0 ? "red" : undefined} />
+          <HeaderStat label="Ratio" value={formatRoundedNumber(getGreenRedRatio(breakdown.green, breakdown.red))} />
         </div>
       </div>
 

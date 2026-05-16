@@ -1039,7 +1039,7 @@ export function getDayBreakdown(snapshot: FpairSnapshot, date: string): DayBreak
   return getDayBreakdownForLevel(snapshot, date, getLevelProgress(snapshot).level);
 }
 
-function getDayBreakdownForLevel(snapshot: FpairSnapshot, date: string, targetLevel: number): DayBreakdown {
+export function getDayBreakdownForLevel(snapshot: FpairSnapshot, date: string, targetLevel: number): DayBreakdown {
   const entry = snapshot.journal[date];
   const result = snapshot.questResults[date];
   const selfCare = getSelfCareScore(snapshot, date, targetLevel);
@@ -1108,7 +1108,7 @@ export function getStats(snapshot: FpairSnapshot, from: string, to: string) {
       const breakdown = getDayBreakdownForLevel(snapshot, date, targetLevel);
       acc.green += breakdown.green;
       acc.red += breakdown.red;
-      acc.ratio += breakdown.score;
+      acc.ratio += getGreenRedRatio(breakdown.green, breakdown.red);
       if (breakdown.green > breakdown.red) acc.cleanDays += 1;
       return acc;
     },
@@ -1122,6 +1122,7 @@ export function getStats(snapshot: FpairSnapshot, from: string, to: string) {
     avgRatioPerDay: totals.ratio / divisor,
     avgRedPerDay: totals.red / divisor,
     conversion: totals.green + totals.red ? Math.round((totals.green / (totals.green + totals.red)) * 100) : 0,
+    ratio: getGreenRedRatio(totals.green, totals.red),
   };
 }
 
@@ -1308,7 +1309,7 @@ function getLevelProgressFromCounts(green: number, red: number): LevelProgress {
   let level = 1;
 
   for (let candidate = maxLevel; candidate >= 1; candidate -= 1) {
-    if (score >= getLevelScoreTarget(candidate) && conversion >= getRequiredGreenConversion(candidate)) {
+    if (score >= getLevelScoreTarget(candidate)) {
       level = candidate;
       break;
     }
@@ -1321,7 +1322,6 @@ function getLevelProgressFromCounts(green: number, red: number): LevelProgress {
   const xpProgress = nextLevel
     ? (score - scoreForCurrentLevel) / Math.max(1, scoreForNextLevel - scoreForCurrentLevel)
     : 1;
-  const ratioProgress = nextLevelRatioRequired > 0 ? conversion / nextLevelRatioRequired : 1;
 
   return {
     conversion,
@@ -1331,7 +1331,7 @@ function getLevelProgressFromCounts(green: number, red: number): LevelProgress {
     nextLevel,
     nextLevelRatioRequired,
     nextLevelScore: scoreForNextLevel,
-    progress: nextLevel ? Math.round(Math.max(0, Math.min(1, Math.min(xpProgress, ratioProgress))) * 100) : 100,
+    progress: nextLevel ? Math.round(Math.max(0, Math.min(1, xpProgress)) * 100) : 100,
     red,
     score,
   };
@@ -1352,6 +1352,11 @@ function getRequiredGreenConversion(level: number) {
 function getGreenConversion(green: number, red: number) {
   const total = green + red;
   return total ? green / total : 1;
+}
+
+function getGreenRedRatio(green: number, red: number) {
+  if (red === 0) return green > 0 ? green : 0;
+  return green / red;
 }
 
 function rowToProfile(row: Record<string, unknown> | null | undefined): Profile {

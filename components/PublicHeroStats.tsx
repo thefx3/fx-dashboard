@@ -23,13 +23,14 @@ export default function PublicHeroStats({ today }: { today: string }) {
     },
     { green: 0, red: 0 },
   );
+  const todayCounts = countEntry(entries[today], today);
   const dayLabel =
     loaded && settings.startDate
       ? `Day ${daysBetween(settings.startDate, today)}`
       : "Day --";
   const stats: Stats = {
     green: totals.green,
-    ratio: totals.green + totals.red ? Math.round((totals.green / (totals.green + totals.red)) * 100) : 0,
+    ratio: getGreenRedRatio(totals.green, totals.red),
     red: totals.red,
   };
 
@@ -39,21 +40,37 @@ export default function PublicHeroStats({ today }: { today: string }) {
         {dayLabel}
       </p>
       <div className="mt-8 grid grid-cols-3 divide-x divide-white/22 border-y border-white/22 bg-black/12 py-5 backdrop-blur-sm">
-        <Stat value={stats.green} label="Green" />
-        <Stat value={stats.red} label="Red" />
-        <Stat value={`${stats.ratio}%`} label="Ratio" />
+        <Stat value={stats.green} label="Green" delta={todayCounts.green} />
+        <Stat value={stats.red} label="Red" delta={todayCounts.red} />
+        <Stat value={formatRatio(stats.ratio)} label="Ratio" />
       </div>
     </div>
   );
 }
 
-function Stat({ value, label }: { value: number | string; label: string }) {
+function Stat({ value, label, delta }: { value: number | string; label: string; delta?: number }) {
   return (
-    <div>
+    <div className="relative">
+      {delta != null ? (
+        <span className="absolute right-4 top-0 text-xs font-semibold text-white/58">
+          + {delta}
+        </span>
+      ) : null}
       <p className="text-4xl font-semibold leading-none">{value}</p>
       <p className="mt-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/72">
         {label}
       </p>
     </div>
   );
+}
+
+function getGreenRedRatio(green: number, red: number) {
+  if (red === 0) return green > 0 ? green : 0;
+  return green / red;
+}
+
+function formatRatio(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
