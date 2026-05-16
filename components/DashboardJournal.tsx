@@ -258,6 +258,7 @@ export default function DashboardJournal({
 
               <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_auto]">
                 <input
+                  aria-label="New planned task"
                   className="form-input"
                   value={newWant}
                   onChange={(event) => setNewWant(event.target.value)}
@@ -301,6 +302,7 @@ export default function DashboardJournal({
                   How do I feel this morning ?
                 </span>
                 <textarea
+                  aria-label="Morning feeling"
                   className="form-input mt-2 min-h-28 resize-y"
                   value={entry.morningFeeling}
                   onChange={(event) =>
@@ -353,6 +355,7 @@ export default function DashboardJournal({
 
                   <div className="mt-6 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-stretch">
                     <input
+                      aria-label="New activity"
                       className="form-input"
                       value={newActivity}
                       onChange={(event) => setNewActivity(event.target.value)}
@@ -411,6 +414,7 @@ export default function DashboardJournal({
                       How did I feel today ?
                     </span>
                     <textarea
+                      aria-label="End of day feeling"
                       className="form-input mt-2 min-h-24 resize-y"
                       value={entry.eveningFeeling}
                       onChange={(event) =>
@@ -466,6 +470,7 @@ function JournalTextInput({
         {formatTaskTime(createdAt)}
       </span>
       <input
+        aria-label="Planned task text"
         className="form-input"
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -506,6 +511,7 @@ function DiaryView({
           <p className="eyebrow">Diary</p>
           <h3 className="mt-2 text-2xl font-semibold">{formatDate(selectedDate)}</h3>
           <textarea
+            aria-label="Diary text"
             className="form-input mt-5 min-h-[320px] resize-y"
             disabled={isPast}
             value={entry.diaryText}
@@ -598,6 +604,7 @@ function ActivityItem({
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_36px] items-center gap-1.5 sm:gap-2">
         <StatusDot status={activity.status} />
         <input
+          aria-label="Activity text"
           className="form-input"
           value={activity.text}
           onChange={(event) => onTextChange(event.target.value)}

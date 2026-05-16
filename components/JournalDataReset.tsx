@@ -116,6 +116,7 @@ export default function JournalDataReset({ today }: { today: string }) {
 
         <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
           <input
+            aria-label="Dashboard start date"
             type="date"
             value={draftStartDate}
             onChange={(event) => setDraftStartDate(event.target.value)}
@@ -170,6 +171,7 @@ export default function JournalDataReset({ today }: { today: string }) {
             Type DELETE to confirm.
           </p>
           <input
+            aria-label="Delete confirmation"
             className="form-input mt-3 bg-white"
             value={confirmation}
             onChange={(event) => setConfirmation(event.target.value)}

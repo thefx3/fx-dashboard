@@ -454,7 +454,7 @@ function JournalTasksPanel({
 
   return (
     <div className="surface p-6 sm:p-8">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Journal</p>
           <h2 className="mt-2 text-2xl font-semibold">Tasks</h2>
@@ -485,11 +485,11 @@ function JournalTasksPanel({
               />
               <span className="min-w-0 truncate">{task.text}</span>
               <div className="grid grid-cols-2 gap-1.5">
-                <StatusIcon active={task.completed === true} tone="green" onClick={() => onSaveStatus(task.id, true)}>
-                  <Check className="h-4 w-4" />
+                <StatusIcon active={task.completed === true} ariaLabel={`Mark "${task.text}" as done`} tone="green" onClick={() => onSaveStatus(task.id, true)}>
+                  <Check className="h-4 w-4" aria-hidden="true" />
                 </StatusIcon>
-                <StatusIcon active={task.completed === false} tone="red" onClick={() => onSaveStatus(task.id, false)}>
-                  <X className="h-4 w-4" />
+                <StatusIcon active={task.completed === false} ariaLabel={`Mark "${task.text}" as missed`} tone="red" onClick={() => onSaveStatus(task.id, false)}>
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </StatusIcon>
               </div>
             </div>
@@ -515,7 +515,7 @@ function OverviewQuestsPanel({
 }) {
   return (
     <div className="surface p-6 sm:p-8">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Quests</p>
           <h2 className="mt-2 text-2xl font-semibold">Today quests</h2>
@@ -598,11 +598,11 @@ function StatsWorkspace({
       <section className="flex flex-wrap items-center justify-between gap-3">
         {tabNav}
         <div className="flex items-center gap-2">
-          <button type="button" className="icon-button" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, -1))}>
+          <button type="button" className="icon-button" aria-label="Previous period" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, -1))}>
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="border border-site bg-card px-3 py-2 text-sm font-semibold text-site-muted">{period.from} to {period.to}</span>
-          <button type="button" className="icon-button" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, 1))}>
+          <button type="button" className="icon-button" aria-label="Next period" onClick={() => onSelectedDateChange(shiftPeriod(selectedDate, range, 1))}>
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -1286,11 +1286,11 @@ function QuestForm({ onCancel, onSave, quest }: { onCancel?: () => void; onSave:
       <p className="eyebrow">{isEditing ? "Edit" : "Create"}</p>
       <h2 className="mt-2 text-2xl font-semibold">{isEditing ? "Edit quest" : "New quest"}</h2>
       <div className="mt-5 grid gap-3">
-        <input className="form-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Quest title" />
-        <Select value={category} onChange={(value) => setCategory(value as Quest["category"])} options={questCategories} />
-        <Select value={cadence} onChange={(value) => setCadence(value as Quest["cadence"])} options={["daily", "weekly", "monthly", "one_off"]} />
-        <Select value={condition} onChange={(value) => setCondition(value as Quest["condition"])} options={["to_do", "to_not_do", "reach_target", "stay_under"]} />
-        <input className="form-input" value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Target" type="number" disabled={condition === "to_do" || condition === "to_not_do"} />
+        <input aria-label="Quest title" className="form-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Quest title" />
+        <Select ariaLabel="Quest category" value={category} onChange={(value) => setCategory(value as Quest["category"])} options={questCategories} />
+        <Select ariaLabel="Quest cadence" value={cadence} onChange={(value) => setCadence(value as Quest["cadence"])} options={["daily", "weekly", "monthly", "one_off"]} />
+        <Select ariaLabel="Quest condition" value={condition} onChange={(value) => setCondition(value as Quest["condition"])} options={["to_do", "to_not_do", "reach_target", "stay_under"]} />
+        <input aria-label="Quest target" className="form-input" value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Target" type="number" disabled={condition === "to_do" || condition === "to_not_do"} />
         <button
           type="button"
           className="btn-primary justify-center"
@@ -1367,10 +1367,12 @@ function ListsWorkspace({
     <div key={item.id} className="grid gap-2 border border-site bg-site p-2.5 text-sm xl:grid-cols-[auto_1fr] xl:items-start">
       <button
         type="button"
+        aria-label={item.completed ? `Mark "${item.title}" as open` : `Mark "${item.title}" as completed`}
+        aria-pressed={item.completed}
         className={cn("grid h-7 w-7 place-items-center border", item.completed ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-site bg-card text-site-muted")}
         onClick={() => onSave({ ...item, completed: !item.completed })}
       >
-        <Check className="h-3.5 w-3.5" />
+        <Check className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <div className="min-w-0">
         <span className={cn("block font-semibold leading-5", item.completed && "line-through opacity-60")}>{item.title}</span>
@@ -1413,8 +1415,8 @@ function ListsWorkspace({
           <p className="eyebrow">My lists</p>
           <h2 className="mt-2 text-2xl font-semibold">{editingItem ? "Edit item" : activeLabel}</h2>
           <div className="mt-5 grid gap-3">
-            <input className="form-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Title" />
-            <textarea className="form-input min-h-24 resize-y" value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Details" />
+            <input aria-label="List item title" className="form-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Title" />
+            <textarea aria-label="List item details" className="form-input min-h-24 resize-y" value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Details" />
             <button
               type="button"
               className="btn-primary justify-center"
@@ -1583,7 +1585,7 @@ function CalendarHistoryDetail({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-semibold">{formatLongDate(selectedDate)}</h2>
-          <span className="border border-[#1f6feb]/30 bg-[#1f6feb]/10 px-3 py-1 text-sm font-semibold text-[#1f6feb]">
+          <span className="border border-[#1f6feb] bg-[#1f6feb]/10 px-3 py-1 text-sm font-semibold text-[#1f6feb]">
             Streak {streak}
           </span>
         </div>
@@ -1720,6 +1722,7 @@ function QuestResultRow({
         </p>
       </div>
       <input
+        aria-label={`Value for ${quest.title}`}
         className={cn("form-input h-10 py-0", !hasNumericInput && "cursor-not-allowed opacity-50")}
         disabled={!hasNumericInput}
         value={draftValue}
@@ -1729,13 +1732,13 @@ function QuestResultRow({
         type="number"
       />
       <div className="grid grid-cols-3 gap-1.5">
-        <StatusIcon active={status === "completed"} tone="green" onClick={() => onSave("completed", savedValue)}>
-          <Check className="h-4 w-4" />
+        <StatusIcon active={status === "completed"} ariaLabel={`Mark "${quest.title}" as completed`} tone="green" onClick={() => onSave("completed", savedValue)}>
+          <Check className="h-4 w-4" aria-hidden="true" />
         </StatusIcon>
-        <StatusIcon active={status === "failed"} tone="red" onClick={() => onSave("failed", savedValue)}>
-          <X className="h-4 w-4" />
+        <StatusIcon active={status === "failed"} ariaLabel={`Mark "${quest.title}" as failed`} tone="red" onClick={() => onSave("failed", savedValue)}>
+          <X className="h-4 w-4" aria-hidden="true" />
         </StatusIcon>
-        <StatusIcon active={status === "open"} tone="neutral" onClick={() => onSave("open", savedValue)}>
+        <StatusIcon active={status === "open"} ariaLabel={`Mark "${quest.title}" as open`} tone="neutral" onClick={() => onSave("open", savedValue)}>
           -
         </StatusIcon>
       </div>
@@ -1807,7 +1810,7 @@ function TradeForm({
           <Metric label="Trades today" value={`${tradesToday.length}/2`} tone={dailyLimitReached ? "red" : undefined} />
           <Metric label="P&L today" value={formatMoney(tradesToday.reduce((sum, trade) => sum + trade.pnl, 0))} tone={tradesToday.reduce((sum, trade) => sum + trade.pnl, 0) < 0 ? "red" : "green"} />
         </div>
-        <Select value={selectedAccountId} onChange={setAccountId} options={tradableAccounts.map((account) => account.id)} labels={Object.fromEntries(tradableAccounts.map((account) => [account.id, account.name]))} />
+        <Select ariaLabel="Trading account" value={selectedAccountId} onChange={setAccountId} options={tradableAccounts.map((account) => account.id)} labels={Object.fromEntries(tradableAccounts.map((account) => [account.id, account.name]))} />
         <div className="grid gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-site-muted">Instrument</p>
           {instrumentGroups.map((group) => (
@@ -1815,10 +1818,10 @@ function TradeForm({
           ))}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Select value={direction} onChange={(value) => setDirection(value as TradeDirection)} options={["long", "short"]} />
-          <input className="form-input" value={contracts} onChange={(event) => setContracts(event.target.value)} placeholder="Contracts" type="number" />
+          <Select ariaLabel="Trade direction" value={direction} onChange={(value) => setDirection(value as TradeDirection)} options={["long", "short"]} />
+          <input aria-label="Contracts" className="form-input" value={contracts} onChange={(event) => setContracts(event.target.value)} placeholder="Contracts" type="number" />
         </div>
-        <input className="form-input" value={pnl} onChange={(event) => setPnl(event.target.value)} placeholder="PNL" type="number" />
+        <input aria-label="PNL" className="form-input" value={pnl} onChange={(event) => setPnl(event.target.value)} placeholder="PNL" type="number" />
         {selectedAccountTradedToday ? <p className="text-sm font-semibold text-red-700">This account already has one trade today.</p> : null}
         {dailyLimitReached ? <p className="text-sm font-semibold text-red-700">Daily limit reached: 2 trades max.</p> : null}
         <button
@@ -1880,13 +1883,14 @@ function AccountForm({ onSaveAccount, plans }: { onSaveAccount: (account: Accoun
       <div className="mt-5 grid gap-3">
         {sortedPlans.length ? (
           <>
-            <Select value={effectiveFirm} onChange={(value) => {
+            <Select ariaLabel="Prop firm" value={effectiveFirm} onChange={(value) => {
               setFirm(value);
               const firstPlan = sortedPlans.find((plan) => plan.propFirm === value);
               setAccountSize(firstPlan ? String(firstPlan.accountSizeUsd) : "");
               setPlanId(firstPlan?.id ?? "");
             }} options={firms} />
             <Select
+              ariaLabel="Account size"
               value={effectiveSize}
               onChange={(value) => {
                 setAccountSize(value);
@@ -1896,12 +1900,13 @@ function AccountForm({ onSaveAccount, plans }: { onSaveAccount: (account: Accoun
               labels={Object.fromEntries(sizes.map((size) => [size, formatMoneyCompact(Number(size))]))}
             />
             <Select
+              ariaLabel="Plan type"
               value={selectedPlan?.id ?? ""}
               onChange={setPlanId}
               options={sizePlans.map((plan) => plan.id)}
               labels={Object.fromEntries(sizePlans.map((plan) => [plan.id, getPlanTypeLabel(plan)]))}
             />
-            <input className="form-input" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Quantity" type="number" />
+            <input aria-label="Quantity" className="form-input" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Quantity" type="number" />
             {selectedPlan ? (
               <div className="grid grid-cols-2 gap-2">
                 <Metric label="Price" value={formatMoney(selectedPlan.priceUsd)} />
@@ -1954,15 +1959,15 @@ function AddPropFirmForm({ onSave }: { onSave: (plan: Parameters<typeof saveProp
       <p className="eyebrow">Prop firms</p>
       <h2 className="mt-2 text-2xl font-semibold">Add prop firm plan</h2>
       <div className="mt-5 grid gap-3">
-        <input className="form-input" disabled placeholder="Prop firm" />
-        <input className="form-input" disabled placeholder="Plan name" />
+        <input aria-label="Prop firm" className="form-input" disabled placeholder="Prop firm" />
+        <input aria-label="Plan name" className="form-input" disabled placeholder="Plan name" />
         <div className="grid gap-3 sm:grid-cols-2">
-          <input className="form-input" disabled placeholder="Plan type" />
-          <input className="form-input" disabled placeholder="Account size" type="number" />
-          <input className="form-input" disabled placeholder="Price" type="number" />
-          <input className="form-input" disabled placeholder="Profit target" type="number" />
-          <input className="form-input" disabled placeholder="Daily loss limit" type="number" />
-          <input className="form-input" disabled placeholder="Drawdown" type="number" />
+          <input aria-label="Plan type" className="form-input" disabled placeholder="Plan type" />
+          <input aria-label="Account size" className="form-input" disabled placeholder="Account size" type="number" />
+          <input aria-label="Price" className="form-input" disabled placeholder="Price" type="number" />
+          <input aria-label="Profit target" className="form-input" disabled placeholder="Profit target" type="number" />
+          <input aria-label="Daily loss limit" className="form-input" disabled placeholder="Daily loss limit" type="number" />
+          <input aria-label="Drawdown" className="form-input" disabled placeholder="Drawdown" type="number" />
         </div>
         <button
           type="button"
@@ -2013,6 +2018,7 @@ function AccountsPanel({
                 </p>
               </div>
               <Select
+                ariaLabel={`Phase for ${account.name}`}
                 value={account.phase}
                 onChange={(phase) => onSaveAccount({ ...account, phase: phase as AccountPhase })}
                 options={["evaluation", "funded", "live", "blown_eval", "blown_funded"]}
@@ -2164,7 +2170,7 @@ function RiskPanel() {
           <ChipField label="Risk of drawdown" items={riskPercents.map((risk) => ({ label: `${risk}%`, value: risk }))} value={riskPercent} onChange={setRiskPercent} />
           <label className="grid gap-2">
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-site-muted">Stop points</span>
-            <input className="form-input" value={stopPoints} onChange={(event) => setStopPoints(event.target.value)} placeholder="Stop points" type="number" />
+            <input aria-label="Stop points" className="form-input" value={stopPoints} onChange={(event) => setStopPoints(event.target.value)} placeholder="Stop points" type="number" />
           </label>
         </div>
 
@@ -2202,7 +2208,7 @@ function SelfCareOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot; t
 
   return (
     <div className="surface p-6 sm:p-8">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Self-care</p>
         </div>
@@ -2326,11 +2332,13 @@ function TimeBlock({ label, value }: { label: string; value: string }) {
 
 function StatusIcon({
   active,
+  ariaLabel,
   children,
   onClick,
   tone,
 }: {
   active: boolean;
+  ariaLabel: string;
   children: ReactNode;
   onClick: () => void;
   tone: "green" | "neutral" | "red";
@@ -2346,6 +2354,8 @@ function StatusIcon({
         active && tone === "neutral" && "border-ink bg-ink text-white",
         !active && "border-site bg-card text-site-muted hover:text-site",
       )}
+      aria-label={ariaLabel}
+      aria-pressed={active}
     >
       {children}
     </button>
@@ -2380,18 +2390,20 @@ function Segmented<T extends string>({
 }
 
 function Select({
+  ariaLabel,
   labels,
   onChange,
   options,
   value,
 }: {
+  ariaLabel: string;
   labels?: Record<string, string>;
   onChange: (value: string) => void;
   options: string[];
   value: string;
 }) {
   return (
-    <select className="form-input" value={value} onChange={(event) => onChange(event.target.value)}>
+    <select aria-label={ariaLabel} className="form-input" value={value} onChange={(event) => onChange(event.target.value)}>
       {options.map((option) => (
         <option key={option} value={option}>
           {labels?.[option] ?? option}
