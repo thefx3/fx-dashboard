@@ -99,6 +99,7 @@ const snapshotCache = new Map<
   { snapshot: DashboardSnapshot; cachedAt: number }
 >();
 const snapshotCacheTtlMs = 60_000;
+const journalSaveQueue = new Map<string, Promise<void>>();
 let latestSnapshot: DashboardSnapshot | null = null;
 
 export async function getCurrentUserId() {
@@ -313,7 +314,28 @@ export async function saveJournalEntry(
   entry: JournalEntry,
 ) {
   const normalized = normalizeEntries({ [entryDate]: entry })[entryDate] ?? emptyEntry;
+  const queueKey = `${userId}:${entryDate}`;
+  const previousSave = journalSaveQueue.get(queueKey) ?? Promise.resolve();
+  const nextSave = previousSave
+    .catch(() => undefined)
+    .then(() => persistJournalEntry(userId, entryDate, normalized));
 
+  journalSaveQueue.set(queueKey, nextSave);
+
+  try {
+    await nextSave;
+  } finally {
+    if (journalSaveQueue.get(queueKey) === nextSave) {
+      journalSaveQueue.delete(queueKey);
+    }
+  }
+}
+
+async function persistJournalEntry(
+  userId: string,
+  entryDate: string,
+  normalized: JournalEntry,
+) {
   let { error: entryError } = await supabase
     .from("dashboard_journal_entries")
     .upsert({
@@ -324,7 +346,7 @@ export async function saveJournalEntry(
       evening_feeling: normalized.eveningFeeling,
       evening_mood: normalized.eveningMood,
       diary_text: normalized.diaryText,
-    });
+    }, { onConflict: "user_id,entry_date" });
 
   if (isMissingDiaryTextError(entryError)) {
     const fallback = await supabase
@@ -336,61 +358,83 @@ export async function saveJournalEntry(
         morning_mood: normalized.morningMood,
         evening_feeling: normalized.eveningFeeling,
         evening_mood: normalized.eveningMood,
-      });
+      }, { onConflict: "user_id,entry_date" });
     entryError = fallback.error;
   }
 
   if (entryError) throw entryError;
 
-  const [{ error: tasksDeleteError }, { error: activitiesDeleteError }] =
-    await Promise.all([
-      supabase
-        .from("dashboard_journal_tasks")
-        .delete()
-        .eq("user_id", userId)
-        .eq("entry_date", entryDate),
-      supabase
-        .from("dashboard_journal_activities")
-        .delete()
-        .eq("user_id", userId)
-        .eq("entry_date", entryDate),
-    ]);
+  const taskRows = normalized.wants.map((task, position) => ({
+    user_id: userId,
+    entry_date: entryDate,
+    id: normalizeId(task.id),
+    position,
+    text: task.text,
+    completed: task.completed,
+    created_at: task.createdAt,
+  }));
+  const activityRows = normalized.activities.map((activity, position) => ({
+    user_id: userId,
+    entry_date: entryDate,
+    id: normalizeId(activity.id),
+    position,
+    text: activity.text,
+    status: activity.status,
+  }));
 
+  if (taskRows.length) {
+    const { error } = await supabase
+      .from("dashboard_journal_tasks")
+      .upsert(taskRows, { onConflict: "user_id,id" });
+
+    if (error) throw error;
+  }
+
+  const tasksDeleteError = await deleteStaleJournalRows(
+    "dashboard_journal_tasks",
+    userId,
+    entryDate,
+    taskRows.map((row) => row.id),
+  );
   if (tasksDeleteError) throw tasksDeleteError;
+
+  if (activityRows.length) {
+    const { error } = await supabase
+      .from("dashboard_journal_activities")
+      .upsert(activityRows, { onConflict: "user_id,id" });
+
+    if (error) throw error;
+  }
+
+  const activitiesDeleteError = await deleteStaleJournalRows(
+    "dashboard_journal_activities",
+    userId,
+    entryDate,
+    activityRows.map((row) => row.id),
+  );
   if (activitiesDeleteError) throw activitiesDeleteError;
 
-  if (normalized.wants.length) {
-    const { error } = await supabase.from("dashboard_journal_tasks").insert(
-      normalized.wants.map((task, position) => ({
-        user_id: userId,
-        entry_date: entryDate,
-        id: normalizeId(task.id),
-        position,
-        text: task.text,
-        completed: task.completed,
-        created_at: task.createdAt,
-      })),
-    );
-
-    if (error) throw error;
-  }
-
-  if (normalized.activities.length) {
-    const { error } = await supabase.from("dashboard_journal_activities").insert(
-      normalized.activities.map((activity, position) => ({
-        user_id: userId,
-        entry_date: entryDate,
-        id: normalizeId(activity.id),
-        position,
-        text: activity.text,
-        status: activity.status,
-      })),
-    );
-
-    if (error) throw error;
-  }
-
   patchCachedJournalEntry(userId, entryDate, normalized);
+}
+
+async function deleteStaleJournalRows(
+  table: "dashboard_journal_tasks" | "dashboard_journal_activities",
+  userId: string,
+  entryDate: string,
+  currentIds: string[],
+) {
+  let query = supabase
+    .from(table)
+    .delete()
+    .eq("user_id", userId)
+    .eq("entry_date", entryDate);
+
+  if (currentIds.length) {
+    query = query.not("id", "in", `(${currentIds.join(",")})`);
+  }
+
+  const { error } = await query;
+  return error;
 }
 
 export async function deleteJournalEntriesUpTo(userId: string, today: string) {

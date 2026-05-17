@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CV - Francois-Xavier Pairault</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      :root {
+        --site: #f6f3ee;
+        --site-foreground: #121212;
+        --site-muted: #514a43;
+        --site-border: rgba(18, 18, 18, 0.14);
+        --site-panel: #fffdf8;
+        --ink: #121212;
+        --brand: #6f4d26;
+        --brand-soft: #ebe2d4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: var(--site-foreground);
+        font-family: Inter, Arial, Helvetica, sans-serif;
+        font-size: 9.4px;
+        line-height: 1.38;
+      }
+
+      .page {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        padding: 12mm 13mm;
+        background: #ffffff;
+      }
+
+      .topline {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: start;
+        border-bottom: 1px solid var(--site-border);
+        padding-bottom: 9px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid var(--site-border);
+        background: var(--site-panel);
+        color: var(--ink);
+        font-size: 16px;
+        font-weight: 900;
+        letter-spacing: -0.08em;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 0.95;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        text-transform: uppercase;
+      }
+
+      .role {
+        margin-top: 5px;
+        color: var(--brand);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .contact {
+        display: grid;
+        gap: 3px;
+        min-width: 58mm;
+        color: var(--site-muted);
+        font-size: 8.7px;
+        text-align: right;
+      }
+
+      .summary {
+        margin: 8px 0 10px;
+        border: 1px solid var(--site-border);
+        background: var(--site-panel);
+        padding: 8px 10px;
+        color: var(--site-muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 64mm;
+        gap: 10px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      section {
+        break-inside: avoid;
+      }
+
+      .section-title {
+        margin: 0 0 5px;
+        color: var(--brand);
+        font-size: 8.5px;
+        font-weight: 900;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .panel {
+        border: 1px solid var(--site-border);
+        background: #ffffff;
+        padding: 8px;
+      }
+
+      .item {
+        display: grid;
+        gap: 2px;
+        padding: 5px 0;
+        border-top: 1px solid rgba(18, 18, 18, 0.08);
+      }
+
+      .item:first-of-type {
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .item-head {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: baseline;
+      }
+
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h3 {
+        font-size: 10.2px;
+        font-weight: 800;
+      }
+
+      .meta {
+        color: var(--brand);
+        font-size: 8px;
+        font-weight: 800;
+        text-align: right;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .sub {
+        color: var(--site-muted);
+        font-size: 8.8px;
+        font-weight: 650;
+      }
+
+      ul {
+        margin: 3px 0 0;
+        padding-left: 12px;
+      }
+
+      li {
+        margin: 1px 0;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .tag {
+        border: 1px solid var(--site-border);
+        background: var(--site);
+        padding: 3px 5px;
+        color: var(--site-muted);
+        font-size: 8px;
+        font-weight: 750;
+      }
+
+      .skills {
+        display: grid;
+        gap: 5px;
+      }
+
+      .skill-block {
+        border-top: 1px solid rgba(18, 18, 18, 0.08);
+        padding-top: 5px;
+      }
+
+      .skill-block:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .skill-title {
+        margin-bottom: 2px;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .compact-list {
+        display: grid;
+        gap: 3px;
+        color: var(--site-muted);
+      }
+
+      .language-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+      }
+
+      .language-grid span {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        border-bottom: 1px solid rgba(18, 18, 18, 0.08);
+        padding-bottom: 2px;
+      }
+
+      strong {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topline">
+        <div>
+          <div class="brand">
+            <div class="mark">FP</div>
+            <div>
+              <h1>François-Xavier Pairault</h1>
+              <p class="role">Développeur web full-stack junior · Profil ingénieur</p>
+            </div>
+          </div>
+        </div>
+        <div class="contact">
+          <span>Saint-Germain-en-Laye</span>
+          <span>fx.pairault@yahoo.fr</span>
+          <span>06 65 14 65 55</span>
+          <span>GitHub / Portfolio</span>
+        </div>
+      </header>
+
+      <p class="summary">
+        Ingénieur agroalimentaire Bac +5 en transition vers les métiers de la tech. Profil hybride
+        scientifique, analytique et produit, formé au développement web full-stack avec des projets
+        concrets CRUD, API, versioning et déploiement. Orienté outils, data, amélioration continue et
+        apprentissage rapide.
+      </p>
+
+      <div class="grid">
+        <div class="stack">
+          <section class="panel">
+            <p class="section-title">Expériences</p>
+            <article class="item">
+              <div class="item-head">
+                <h3>Chargé d'accueil & amélioration des outils - La CLEF</h3>
+                <span class="meta">2025 - 2026</span>
+              </div>
+              <p class="sub">Saint-Germain-en-Laye</p>
+              <ul>
+                <li>Optimisation d'outils internes et de méthodes de travail.</li>
+                <li>Gestion opérationnelle, coordination et interface utilisateurs / équipes.</li>
+              </ul>
+            </article>
+            <article class="item">
+              <div class="item-head">
+                <h3>Chef d'équipe & réception - Camping</h3>
+                <span class="meta">2023 - 2025</span>
+              </div>
+              <p class="sub">Italie</p>
+              <ul>
+                <li>Gestion d'une petite équipe, planification et suivi des tâches journalières.</li>
+                <li>Mise en place de nouveaux outils et stratégies numériques.</li>
+              </ul>
+            </article>
+            <article class="item">
+              <div class="item-head">
+                <h3>Ingénieur amélioration continue - Eureden / d'Aucy</h3>
+                <span class="meta">2022</span>
+              </div>
+              <ul>
+                <li>Analyse des flux, process et performance industrielle.</li>
+                <li>Mise en place d'outils méthodes et suivi terrain.</li>
+              </ul>
+            </article>
+            <article class="item">
+              <div class="item-head">
+                <h3>Assistant production - Mytilimer</h3>
+                <span class="meta">2021</span>
+              </div>
+              <ul>
+                <li>Suivi de production, pertes matière, qualité et organisation terrain.</li>
+              </ul>
+            </article>
+          </section>
+
+          <section class="panel">
+            <p class="section-title">Projets tech</p>
+            <article class="item">
+              <div class="item-head">
+                <h3>Applications web full-stack</h3>
+                <span class="meta">Portfolio</span>
+              </div>
+              <ul>
+                <li>Conception d'applications CRUD complètes avec interfaces utilisateur.</li>
+                <li>Gestion de données, logique back-end, API REST, versioning Git et déploiement Vercel.</li>
+              </ul>
+            </article>
+          </section>
+
+          <section class="panel">
+            <p class="section-title">Formation</p>
+            <article class="item">
+              <div class="item-head">
+                <h3>Formation développeur full-stack - The Odin Project</h3>
+                <span class="meta">2025 - 2026</span>
+              </div>
+              <p class="sub">Front-end, back-end, Git/GitHub, bonnes pratiques.</p>
+            </article>
+            <article class="item">
+              <div class="item-head">
+                <h3>Diplôme d'ingénieur agroalimentaire - Polytech Lille</h3>
+                <span class="meta">2022</span>
+              </div>
+            </article>
+            <article class="item">
+              <div class="item-head">
+                <h3>Master Food & Beverage Innovation & Management</h3>
+                <span class="meta">2022</span>
+              </div>
+              <p class="sub">Erasmus, Ancône, Italie.</p>
+            </article>
+            <article class="item">
+              <div class="item-head">
+                <h3>Classe préparatoire intégrée - Mathématiques</h3>
+                <span class="meta">2017 - 2019</span>
+              </div>
+              <p class="sub">Polytech Paris-Sud.</p>
+            </article>
+          </section>
+        </div>
+
+        <aside class="stack">
+          <section class="panel">
+            <p class="section-title">Competences</p>
+            <div class="skills">
+              <div class="skill-block">
+                <p class="skill-title">Développement</p>
+                <div class="tags">
+                  <span class="tag">JavaScript</span>
+                  <span class="tag">HTML</span>
+                  <span class="tag">CSS</span>
+                  <span class="tag">API REST</span>
+                  <span class="tag">Git</span>
+                  <span class="tag">GitHub</span>
+                  <span class="tag">Vercel</span>
+                </div>
+              </div>
+              <div class="skill-block">
+                <p class="skill-title">Data / logique</p>
+                <div class="compact-list">
+                  <span>Structuration de données</span>
+                  <span>Analyse de process</span>
+                  <span>Logique algorithmique</span>
+                  <span>Google Sheets / Scripts</span>
+                  <span>Excel / VBA</span>
+                </div>
+              </div>
+              <div class="skill-block">
+                <p class="skill-title">Methodes</p>
+                <div class="compact-list">
+                  <span>Lean management</span>
+                  <span>PDCA, Kaizen, 5S</span>
+                  <span>Amélioration continue</span>
+                  <span>Gestion de projet</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <p class="section-title">Logiciels</p>
+            <div class="tags">
+              <span class="tag">Lightroom</span>
+              <span class="tag">Premiere</span>
+              <span class="tag">Illustrator</span>
+            </div>
+          </section>
+
+          <section class="panel">
+            <p class="section-title">Langues</p>
+            <div class="language-grid">
+              <span><strong>Français</strong> Natif</span>
+              <span><strong>Anglais</strong> C1</span>
+              <span><strong>Espagnol</strong> B2</span>
+              <span><strong>Italien</strong> B2</span>
+              <span><strong>Portugais</strong> A2</span>
+              <span><strong>Allemand</strong> A1</span>
+            </div>
+          </section>
+
+          <section class="panel">
+            <p class="section-title">Positionnement</p>
+            <div class="compact-list">
+              <span><strong>Profil hybride</strong> ingénierie, tech et opérationnel.</span>
+              <span><strong>Objectif</strong> développement web, outils internes, data et automatisation.</span>
+              <span><strong>Forces</strong> autonomie, apprentissage rapide, analyse et exécution.</span>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

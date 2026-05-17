@@ -115,12 +115,14 @@ export default function DashboardJournal({
 
   function updateEntry(nextEntry: JournalEntry) {
     if (isPast) return;
+    setSyncError(null);
     setEntries((current) => ({ ...current, [selectedDate]: nextEntry }));
 
     if (!userId) return;
 
     void saveJournalEntry(userId, selectedDate, nextEntry)
       .then(() => {
+        setSyncError(null);
         window.dispatchEvent(new Event(dashboardEvents.journal));
       })
       .catch(() => setSyncError(getErrorMessage()));
