@@ -113,7 +113,7 @@ export default function DashboardShell({
           className={cn(
             "flex-1",
             isPlaybooks ? "p-0" : "p-3 sm:p-5",
-            isSettings ? "overflow-hidden" : "overflow-y-auto",
+            isSettings || isPlaybooks ? "overflow-hidden" : "overflow-y-auto",
           )}
         >
           {isSettings ? (

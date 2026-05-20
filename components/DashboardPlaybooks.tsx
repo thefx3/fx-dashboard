@@ -23,7 +23,10 @@ import {
   createPlaybookCourse,
   createPlaybookItem,
   createPlaybookModule,
+  deletePlaybookChapter,
+  deletePlaybookCourse,
   deletePlaybookItem,
+  deletePlaybookModule,
   getLinkItemType,
   getYouTubeEmbedUrl,
   loadPlaybooks,
@@ -223,6 +226,38 @@ export default function DashboardPlaybooks() {
     });
   }
 
+  function handleDeleteCard() {
+    if (!modalState || modalState.mode !== "edit") return;
+    const confirmed = window.confirm(`Delete "${modalState.item.title}" and all its content?`);
+    if (!confirmed) return;
+
+    void runSync(async () => {
+      if (modalState.kind === "course") {
+        await deletePlaybookCourse(userId!, modalState.item.id);
+        if (courseId === modalState.item.id) {
+          setCourseId("");
+          setModuleId("");
+          setChapterId("");
+        }
+      }
+
+      if (modalState.kind === "module") {
+        await deletePlaybookModule(userId!, modalState.item.id);
+        if (moduleId === modalState.item.id) {
+          setModuleId("");
+          setChapterId("");
+        }
+      }
+
+      if (modalState.kind === "chapter") {
+        await deletePlaybookChapter(userId!, modalState.item.id);
+        if (chapterId === modalState.item.id) setChapterId("");
+      }
+
+      setModalState(null);
+    });
+  }
+
   function handleCreateLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedChapter) return;
@@ -338,7 +373,7 @@ export default function DashboardPlaybooks() {
   }));
 
   return (
-    <div className="grid min-h-full gap-0">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <section className="flex flex-wrap items-start justify-between gap-3 border-b border-site px-3 py-3 sm:px-5">
         <div>
           <Breadcrumbs
@@ -379,9 +414,9 @@ export default function DashboardPlaybooks() {
       ) : null}
 
       {!loaded ? (
-        <div className="surface p-6 text-sm text-site-muted">Loading playbooks...</div>
+        <div className="surface flex-1 p-6 text-sm text-site-muted">Loading playbooks...</div>
       ) : (
-        <div className={treeCollapsed ? "grid min-h-0 gap-0 xl:grid-cols-[56px_1fr]" : "grid min-h-0 gap-0 xl:grid-cols-[280px_1fr]"}>
+        <div className={treeCollapsed ? "grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[56px_1fr]" : "grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[280px_1fr]"}>
           <PlaybooksTreeNav
             collapsed={treeCollapsed}
             courses={courses}
@@ -405,7 +440,7 @@ export default function DashboardPlaybooks() {
             selectedCourseId={courseId}
             selectedModuleId={moduleId}
           />
-          <div className="min-w-0 p-3 sm:p-5">
+          <div className="min-h-0 min-w-0 overflow-y-auto p-3 sm:p-5">
             {!selectedCourse ? (
               <CardBrowser
                 entries={courseCards}
@@ -522,6 +557,7 @@ export default function DashboardPlaybooks() {
         <CardModal
           state={modalState}
           onClose={() => setModalState(null)}
+          onDelete={handleDeleteCard}
           onSubmit={handleSubmitCard}
           syncing={syncing}
         />
@@ -598,7 +634,7 @@ function PlaybooksTreeNav({
   selectedModuleId: string;
 }) {
   return (
-    <aside className="sticky top-0 flex h-[calc(100vh-4rem)] flex-col overflow-hidden border-r border-site bg-card">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-r border-site bg-card">
       <div className={collapsed ? "flex justify-center border-b border-site p-2" : "flex items-center justify-between gap-3 border-b border-site px-4 py-3"}>
         {!collapsed ? (
           <p className="eyebrow text-site-muted">Library</p>
@@ -846,11 +882,13 @@ function PlaybookListItem({ entry }: { entry: CardEntry }) {
 
 function CardModal({
   onClose,
+  onDelete,
   onSubmit,
   state,
   syncing,
 }: {
   onClose: () => void;
+  onDelete: () => void;
   onSubmit: (values: CardFormValues) => void;
   state: Exclude<ModalState, null>;
   syncing: boolean;
@@ -927,6 +965,17 @@ function CardModal({
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
             {modalTitle}
           </button>
+          {state.mode === "edit" ? (
+            <button
+              className="inline-flex items-center justify-center gap-2 border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              disabled={syncing}
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Delete {state.kind}
+            </button>
+          ) : null}
         </div>
       </form>
     </div>

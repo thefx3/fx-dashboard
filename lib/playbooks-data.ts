@@ -335,11 +335,126 @@ export async function deletePlaybookItem(userId: string, item: PlaybookItem) {
 }
 
 export async function deletePlaybookCourse(userId: string, courseId: string) {
+  await deletePlaybookMediaForCourse(userId, courseId);
+
   const { error } = await supabase
     .from("dashboard_playbook_courses")
     .delete()
     .eq("user_id", userId)
     .eq("id", courseId);
+  if (error) throw error;
+}
+
+export async function deletePlaybookModule(userId: string, moduleId: string) {
+  await deletePlaybookMediaForModule(userId, moduleId);
+
+  const { error } = await supabase
+    .from("dashboard_playbook_modules")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", moduleId);
+  if (error) throw error;
+}
+
+export async function deletePlaybookChapter(userId: string, chapterId: string) {
+  await deletePlaybookMediaForChapter(userId, chapterId);
+
+  const { error } = await supabase
+    .from("dashboard_playbook_chapters")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", chapterId);
+  if (error) throw error;
+}
+
+async function deletePlaybookMediaForCourse(userId: string, courseId: string) {
+  const { data: courseRows, error: courseError } = await supabase
+    .from("dashboard_playbook_courses")
+    .select("cover_path")
+    .eq("user_id", userId)
+    .eq("id", courseId);
+  if (courseError) throw courseError;
+
+  const { data: moduleRows, error: moduleError } = await supabase
+    .from("dashboard_playbook_modules")
+    .select("id,cover_path")
+    .eq("user_id", userId)
+    .eq("course_id", courseId);
+  if (moduleError) throw moduleError;
+
+  const moduleIds = (moduleRows ?? []).map((row) => row.id).filter(Boolean);
+  const { data: chapterRows, error: chapterError } = moduleIds.length
+    ? await supabase
+      .from("dashboard_playbook_chapters")
+      .select("id,cover_path")
+      .eq("user_id", userId)
+      .in("module_id", moduleIds)
+    : { data: [], error: null };
+  if (chapterError) throw chapterError;
+
+  const chapterIds = (chapterRows ?? []).map((row) => row.id).filter(Boolean);
+  const itemPaths = chapterIds.length ? await getPlaybookItemStoragePaths(userId, chapterIds) : [];
+  await removePlaybookMedia([
+    ...(courseRows ?? []).map((row) => row.cover_path),
+    ...(moduleRows ?? []).map((row) => row.cover_path),
+    ...(chapterRows ?? []).map((row) => row.cover_path),
+    ...itemPaths,
+  ]);
+}
+
+async function deletePlaybookMediaForModule(userId: string, moduleId: string) {
+  const { data: moduleRows, error: moduleError } = await supabase
+    .from("dashboard_playbook_modules")
+    .select("cover_path")
+    .eq("user_id", userId)
+    .eq("id", moduleId);
+  if (moduleError) throw moduleError;
+
+  const { data: chapterRows, error: chapterError } = await supabase
+    .from("dashboard_playbook_chapters")
+    .select("id,cover_path")
+    .eq("user_id", userId)
+    .eq("module_id", moduleId);
+  if (chapterError) throw chapterError;
+
+  const chapterIds = (chapterRows ?? []).map((row) => row.id).filter(Boolean);
+  const itemPaths = chapterIds.length ? await getPlaybookItemStoragePaths(userId, chapterIds) : [];
+  await removePlaybookMedia([
+    ...(moduleRows ?? []).map((row) => row.cover_path),
+    ...(chapterRows ?? []).map((row) => row.cover_path),
+    ...itemPaths,
+  ]);
+}
+
+async function deletePlaybookMediaForChapter(userId: string, chapterId: string) {
+  const { data: chapterRows, error: chapterError } = await supabase
+    .from("dashboard_playbook_chapters")
+    .select("cover_path")
+    .eq("user_id", userId)
+    .eq("id", chapterId);
+  if (chapterError) throw chapterError;
+
+  const itemPaths = await getPlaybookItemStoragePaths(userId, [chapterId]);
+  await removePlaybookMedia([
+    ...(chapterRows ?? []).map((row) => row.cover_path),
+    ...itemPaths,
+  ]);
+}
+
+async function getPlaybookItemStoragePaths(userId: string, chapterIds: string[]) {
+  const { data, error } = await supabase
+    .from("dashboard_playbook_items")
+    .select("storage_path")
+    .eq("user_id", userId)
+    .in("chapter_id", chapterIds);
+  if (error) throw error;
+  return (data ?? []).map((row) => row.storage_path);
+}
+
+async function removePlaybookMedia(paths: Array<string | null>) {
+  const uniquePaths = [...new Set(paths.filter((path): path is string => Boolean(path)))];
+  if (!uniquePaths.length) return;
+  const { error } = await supabase.storage.from(playbookMediaBucket).remove(uniquePaths);
   if (error) throw error;
 }
 
