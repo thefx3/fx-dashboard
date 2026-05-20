@@ -83,7 +83,7 @@ export default function DashboardShell({
 
   return (
     <main className={cn(
-      "grid h-screen overflow-hidden bg-site text-site",
+      "grid h-screen overflow-hidden bg-site text-site transition-[grid-template-columns] duration-300 ease-out",
       sidebarCollapsed ? "lg:grid-cols-[76px_1fr]" : "lg:grid-cols-[272px_1fr]",
     )}>
       <DashboardSidebar
@@ -193,12 +193,12 @@ function DashboardSidebar({
 }) {
   const isSettingsActive = activeView === "settings";
   return (
-    <aside className={cn("hidden h-screen overflow-hidden border-r border-white/10 bg-ink p-4 text-white lg:flex lg:flex-col", collapsed && "items-center px-3")}>
-      <div className={cn("flex w-full items-center", collapsed ? "justify-center" : "justify-between gap-3")}>
+    <aside className={cn("hidden h-screen overflow-hidden border-r border-white/10 bg-ink p-4 text-white transition-[padding] duration-300 ease-out lg:flex lg:flex-col", collapsed && "items-center px-3")}>
+      <div className={cn("flex w-full items-center transition-all duration-300 ease-out", collapsed ? "justify-center" : "justify-between gap-3")}>
         {!collapsed ? <BrandMark tone="dark" className="text-white" /> : null}
         <button
           type="button"
-          className="inline-flex h-9 w-9 items-center justify-center border border-white/[0.12] text-white/[0.62] transition hover:text-white"
+          className="inline-flex h-9 w-9 items-center justify-center border border-white/[0.12] text-white/[0.62] transition duration-200 hover:border-white/[0.2] hover:text-white"
           onClick={onToggleCollapsed}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -206,7 +206,7 @@ function DashboardSidebar({
         </button>
       </div>
 
-      <nav className="mt-10 space-y-1">
+      <nav className="mt-10 space-y-1 transition-[margin] duration-300 ease-out">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.view === activeView;
@@ -220,7 +220,7 @@ function DashboardSidebar({
                 onNavigate(item.view);
               }}
               className={cn(
-                "flex w-full items-center gap-3 border border-transparent px-3 py-2.5 text-sm font-medium transition",
+                "flex w-full items-center gap-3 border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 collapsed && "justify-center px-2",
                 isActive
                   ? "border-white/[0.16] bg-white/[0.08] text-white"

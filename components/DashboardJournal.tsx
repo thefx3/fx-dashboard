@@ -125,7 +125,7 @@ export default function DashboardJournal({
         setSyncError(null);
         window.dispatchEvent(new Event(dashboardEvents.journal));
       })
-      .catch(() => setSyncError(getErrorMessage()));
+      .catch((error) => setSyncError(getErrorMessage(error)));
   }
 
   function addWant() {
@@ -1285,6 +1285,26 @@ function getMoodEmoji(value: MoodValue) {
   return moodOptions.find((option) => option.value === value)?.emoji ?? "";
 }
 
-function getErrorMessage() {
+function getErrorMessage(error?: unknown) {
+  const message = getErrorText(error).toLowerCase();
+  if (
+    message.includes("failed to fetch") ||
+    message.includes("network") ||
+    message.includes("proxy") ||
+    message.includes("err_proxy") ||
+    message.includes("load failed")
+  ) {
+    return "Sync failed. Supabase could not be reached. Check proxy/VPN/network and try again.";
+  }
+
   return "Sync failed. Please refresh the page or check the dashboard schema.";
+}
+
+function getErrorText(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && error && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return "";
 }

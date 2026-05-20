@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
 import {
   BookOpen,
+  ChevronDown,
+  ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   FileImage,
@@ -322,7 +324,7 @@ export default function DashboardPlaybooks() {
   const courseCards = courses.map((course): CardEntry => ({
     coverPath: course.coverPath,
     coverUrl: course.coverUrl,
-    description: course.description || "No description yet.",
+    description: course.description,
     id: course.id,
     kind: "course",
     onEdit: () => setModalState({ kind: "course", mode: "edit", item: course }),
@@ -341,7 +343,7 @@ export default function DashboardPlaybooks() {
   const moduleCards = (selectedCourse?.modules ?? []).map((module): CardEntry => ({
     coverPath: module.coverPath,
     coverUrl: module.coverUrl,
-    description: `${module.chapters.length} chapters in ${selectedCourse?.title ?? "course"}`,
+    description: "",
     id: module.id,
     kind: "module",
     onEdit: () => setModalState({ kind: "module", mode: "edit", item: module }),
@@ -359,7 +361,7 @@ export default function DashboardPlaybooks() {
   const chapterCards = (selectedModule?.chapters ?? []).map((chapter): CardEntry => ({
     coverPath: chapter.coverPath,
     coverUrl: chapter.coverUrl,
-    description: "Chapter",
+    description: "",
     id: chapter.id,
     kind: "chapter",
     onEdit: () => setModalState({ kind: "chapter", mode: "edit", item: chapter }),
@@ -380,11 +382,6 @@ export default function DashboardPlaybooks() {
             course={selectedCourse}
             module={selectedModule}
             chapter={selectedChapter}
-            onAllCourses={() => {
-              setCourseId("");
-              setModuleId("");
-              setChapterId("");
-            }}
             onCourse={() => {
               setModuleId("");
               setChapterId("");
@@ -416,10 +413,15 @@ export default function DashboardPlaybooks() {
       {!loaded ? (
         <div className="surface flex-1 p-6 text-sm text-site-muted">Loading playbooks...</div>
       ) : (
-        <div className={treeCollapsed ? "grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[56px_1fr]" : "grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[280px_1fr]"}>
+        <div className={treeCollapsed ? "grid min-h-0 flex-1 overflow-hidden transition-[grid-template-columns] duration-300 ease-out xl:grid-cols-[56px_1fr]" : "grid min-h-0 flex-1 overflow-hidden transition-[grid-template-columns] duration-300 ease-out xl:grid-cols-[280px_1fr]"}>
           <PlaybooksTreeNav
             collapsed={treeCollapsed}
             courses={courses}
+            onAllCourses={() => {
+              setCourseId("");
+              setModuleId("");
+              setChapterId("");
+            }}
             onSelectChapter={(nextCourseId, nextModuleId, nextChapterId) => {
               setCourseId(nextCourseId);
               setModuleId(nextModuleId);
@@ -452,7 +454,7 @@ export default function DashboardPlaybooks() {
                       entries={(target?.modules ?? []).map((module): CardEntry => ({
                         coverPath: module.coverPath,
                         coverUrl: module.coverUrl,
-                        description: `${module.chapters.length} chapters`,
+                        description: "",
                         id: module.id,
                         kind: "module",
                         onEdit: () => setModalState({ kind: "module", mode: "edit", item: module }),
@@ -486,7 +488,7 @@ export default function DashboardPlaybooks() {
                       entries={(target?.chapters ?? []).map((chapter): CardEntry => ({
                         coverPath: chapter.coverPath,
                         coverUrl: chapter.coverUrl,
-                        description: "Chapter",
+                        description: "",
                         id: chapter.id,
                         kind: "chapter",
                         onEdit: () => setModalState({ kind: "chapter", mode: "edit", item: chapter }),
@@ -570,34 +572,27 @@ function Breadcrumbs({
   chapter,
   course,
   module,
-  onAllCourses,
   onCourse,
   onModule,
 }: {
   chapter: PlaybookChapter | undefined;
   course: PlaybookCourse | undefined;
   module: PlaybookModule | undefined;
-  onAllCourses: () => void;
   onCourse: () => void;
   onModule: () => void;
 }) {
+  if (!course) return <nav className="h-5" aria-label="Playbook navigation" />;
+
   return (
     <nav className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold text-site-muted" aria-label="Playbook navigation">
-      <button type="button" className="transition hover:text-site" onClick={onAllCourses}>
-        All courses
+      <span>/</span>
+      <button type="button" className="max-w-52 truncate transition hover:text-brand" onClick={onCourse}>
+        {course.title}
       </button>
-      {course ? (
-        <>
-          <span>/</span>
-          <button type="button" className="max-w-52 truncate transition hover:text-site" onClick={onCourse}>
-            {course.title}
-          </button>
-        </>
-      ) : null}
       {module ? (
         <>
           <span>/</span>
-          <button type="button" className="max-w-52 truncate transition hover:text-site" onClick={onModule}>
+          <button type="button" className="max-w-52 truncate transition hover:text-brand" onClick={onModule}>
             {module.title}
           </button>
         </>
@@ -615,6 +610,7 @@ function Breadcrumbs({
 function PlaybooksTreeNav({
   collapsed,
   courses,
+  onAllCourses,
   onSelectChapter,
   onSelectCourse,
   onSelectModule,
@@ -625,6 +621,7 @@ function PlaybooksTreeNav({
 }: {
   collapsed: boolean;
   courses: PlaybookCourse[];
+  onAllCourses: () => void;
   onSelectChapter: (courseId: string, moduleId: string, chapterId: string) => void;
   onSelectCourse: (courseId: string) => void;
   onSelectModule: (courseId: string, moduleId: string) => void;
@@ -633,15 +630,26 @@ function PlaybooksTreeNav({
   selectedCourseId: string;
   selectedModuleId: string;
 }) {
+  const [openCourseId, setOpenCourseId] = useState(selectedCourseId);
+
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-r border-site bg-card">
-      <div className={collapsed ? "flex justify-center border-b border-site p-2" : "flex items-center justify-between gap-3 border-b border-site px-4 py-3"}>
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-r border-site bg-card transition-[width] duration-300 ease-out">
+      <div className={collapsed ? "flex justify-center border-b border-site p-2 transition-all duration-300 ease-out" : "flex items-center justify-between gap-3 border-b border-site px-4 py-3 transition-all duration-300 ease-out"}>
         {!collapsed ? (
-          <p className="eyebrow text-site-muted">Library</p>
+          <button
+            type="button"
+            className={selectedCourseId ? "eyebrow text-site-muted transition hover:text-brand" : "eyebrow text-brand"}
+            onClick={() => {
+              setOpenCourseId("");
+              onAllCourses();
+            }}
+          >
+            All courses
+          </button>
         ) : null}
         <button
           type="button"
-          className="inline-flex h-9 w-9 items-center justify-center border border-site bg-site text-site-muted transition hover:text-site"
+          className="inline-flex h-9 w-9 items-center justify-center border border-site bg-site text-site-muted transition hover:border-brand/35 hover:bg-brand-soft hover:text-brand"
           onClick={onToggle}
           aria-label={collapsed ? "Expand playbooks navigation" : "Collapse playbooks navigation"}
         >
@@ -655,32 +663,46 @@ function PlaybooksTreeNav({
             <div key={course.id} className="grid border-b border-site py-1 last:border-b-0">
               <button
                 type="button"
-                className={selectedCourseId === course.id && !selectedModuleId ? "border border-ink bg-ink px-3 py-2.5 text-left text-sm font-semibold text-white" : "border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-site transition hover:border-site hover:bg-site"}
-                onClick={() => onSelectCourse(course.id)}
+                className={selectedCourseId === course.id && !selectedModuleId ? "grid grid-cols-[1fr_auto] items-center gap-2 border border-ink bg-ink px-3 py-2.5 text-left text-sm font-semibold text-white" : "grid grid-cols-[1fr_auto] items-center gap-2 border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-site transition hover:border-brand/35 hover:bg-brand-soft hover:text-brand"}
+                onClick={() => {
+                  setOpenCourseId(openCourseId === course.id ? "" : course.id);
+                  onSelectCourse(course.id);
+                }}
               >
-                {course.title}
+                <span className="min-w-0 truncate">{course.title}</span>
+                {openCourseId === course.id ? <ChevronDown className="h-4 w-4 transition-transform duration-200" aria-hidden="true" /> : <ChevronRight className="h-4 w-4 transition-transform duration-200" aria-hidden="true" />}
               </button>
-              {course.modules.map((module) => (
-                <div key={module.id} className="grid">
-                  <button
-                    type="button"
-                    className={selectedModuleId === module.id && !selectedChapterId ? "ml-3 border border-ink bg-ink px-3 py-2 text-left text-sm font-semibold text-white" : "ml-3 border border-transparent px-3 py-2 text-left text-sm text-site-muted transition hover:border-site hover:bg-site hover:text-site"}
-                    onClick={() => onSelectModule(course.id, module.id)}
-                  >
-                    {module.title}
-                  </button>
-                  {module.chapters.map((chapter) => (
-                    <button
-                      key={chapter.id}
-                      type="button"
-                      className={selectedChapterId === chapter.id ? "ml-6 border border-ink bg-ink px-3 py-2 text-left text-xs font-semibold text-white" : "ml-6 border border-transparent px-3 py-2 text-left text-xs text-site-muted transition hover:border-site hover:bg-site hover:text-site"}
-                      onClick={() => onSelectChapter(course.id, module.id, chapter.id)}
-                    >
-                      {chapter.title}
-                    </button>
+              <div className={openCourseId === course.id ? "grid grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out" : "grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out"}>
+                <div className="min-h-0 overflow-hidden">
+                  {course.modules.map((module) => (
+                    <div key={module.id} className="grid">
+                      <button
+                        type="button"
+                        className={selectedModuleId === module.id && !selectedChapterId ? "ml-3 border border-ink bg-ink px-3 py-2 text-left text-sm font-semibold text-white" : "ml-3 border border-transparent px-3 py-2 text-left text-sm text-site-muted transition hover:border-brand/35 hover:bg-brand-soft hover:text-brand"}
+                        onClick={() => {
+                          setOpenCourseId(course.id);
+                          onSelectModule(course.id, module.id);
+                        }}
+                      >
+                        {module.title}
+                      </button>
+                      {module.chapters.map((chapter) => (
+                        <button
+                          key={chapter.id}
+                          type="button"
+                          className={selectedChapterId === chapter.id ? "ml-6 border border-ink bg-ink px-3 py-2 text-left text-xs font-semibold text-white" : "ml-6 border border-transparent px-3 py-2 text-left text-xs text-site-muted transition hover:border-brand/35 hover:bg-brand-soft hover:text-brand"}
+                          onClick={() => {
+                            setOpenCourseId(course.id);
+                            onSelectChapter(course.id, module.id, chapter.id);
+                          }}
+                        >
+                          {chapter.title}
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </div>
-              ))}
+              </div>
             </div>
           )) : (
             <EmptyState text="No course yet." />
@@ -826,7 +848,7 @@ function PlaybookCard({
           <BookOpen className="h-4 w-4" aria-hidden="true" />
         </span>
         <span className="relative z-10 block min-w-0 break-words text-2xl font-semibold leading-tight">{entry.title}</span>
-        {!compact ? (
+        {!compact && entry.description ? (
           <span className="relative z-10 mt-3 line-clamp-3 block text-sm leading-6 text-site-muted">
             {entry.description}
           </span>
@@ -866,7 +888,7 @@ function PlaybookListItem({ entry }: { entry: CardEntry }) {
       </button>
       <button type="button" className="min-w-0 text-left" onClick={entry.onOpen}>
         <p className="truncate font-semibold">{entry.title}</p>
-        <p className="mt-1 truncate text-sm text-site-muted">{entry.description}</p>
+        {entry.description ? <p className="mt-1 truncate text-sm text-site-muted">{entry.description}</p> : null}
       </button>
       <div className="flex items-center gap-2">
         <span className="hidden text-xs font-semibold uppercase tracking-[0.12em] text-site-muted sm:inline">

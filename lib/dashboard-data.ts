@@ -101,6 +101,7 @@ const snapshotCache = new Map<
 const snapshotCacheTtlMs = 60_000;
 const journalSaveQueue = new Map<string, Promise<void>>();
 let latestSnapshot: DashboardSnapshot | null = null;
+const transientRetryDelaysMs = [350, 1_000];
 
 export async function getCurrentUserId() {
   try {
@@ -336,7 +337,7 @@ async function persistJournalEntry(
   entryDate: string,
   normalized: JournalEntry,
 ) {
-  let { error: entryError } = await supabase
+  let { error: entryError } = await retryTransientSupabaseRequest(() => supabase
     .from("dashboard_journal_entries")
     .upsert({
       user_id: userId,
@@ -346,10 +347,10 @@ async function persistJournalEntry(
       evening_feeling: normalized.eveningFeeling,
       evening_mood: normalized.eveningMood,
       diary_text: normalized.diaryText,
-    }, { onConflict: "user_id,entry_date" });
+    }, { onConflict: "user_id,entry_date" }));
 
   if (isMissingDiaryTextError(entryError)) {
-    const fallback = await supabase
+    const fallback = await retryTransientSupabaseRequest(() => supabase
       .from("dashboard_journal_entries")
       .upsert({
         user_id: userId,
@@ -358,7 +359,7 @@ async function persistJournalEntry(
         morning_mood: normalized.morningMood,
         evening_feeling: normalized.eveningFeeling,
         evening_mood: normalized.eveningMood,
-      }, { onConflict: "user_id,entry_date" });
+      }, { onConflict: "user_id,entry_date" }));
     entryError = fallback.error;
   }
 
@@ -383,9 +384,9 @@ async function persistJournalEntry(
   }));
 
   if (taskRows.length) {
-    const { error } = await supabase
+    const { error } = await retryTransientSupabaseRequest(() => supabase
       .from("dashboard_journal_tasks")
-      .upsert(taskRows, { onConflict: "user_id,id" });
+      .upsert(taskRows, { onConflict: "user_id,id" }));
 
     if (error) throw error;
   }
@@ -399,9 +400,9 @@ async function persistJournalEntry(
   if (tasksDeleteError) throw tasksDeleteError;
 
   if (activityRows.length) {
-    const { error } = await supabase
+    const { error } = await retryTransientSupabaseRequest(() => supabase
       .from("dashboard_journal_activities")
-      .upsert(activityRows, { onConflict: "user_id,id" });
+      .upsert(activityRows, { onConflict: "user_id,id" }));
 
     if (error) throw error;
   }
@@ -423,18 +424,60 @@ async function deleteStaleJournalRows(
   entryDate: string,
   currentIds: string[],
 ) {
-  let query = supabase
-    .from(table)
-    .delete()
-    .eq("user_id", userId)
-    .eq("entry_date", entryDate);
+  const { error } = await retryTransientSupabaseRequest(() => {
+    let query = supabase
+      .from(table)
+      .delete()
+      .eq("user_id", userId)
+      .eq("entry_date", entryDate);
 
-  if (currentIds.length) {
-    query = query.not("id", "in", `(${currentIds.join(",")})`);
+    if (currentIds.length) {
+      query = query.not("id", "in", `(${currentIds.join(",")})`);
+    }
+
+    return query;
+  });
+  return error;
+}
+
+async function retryTransientSupabaseRequest<T>(operation: () => PromiseLike<T>) {
+  for (const [attempt, delayMs] of transientRetryDelaysMs.entries()) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isTransientNetworkError(error) || attempt === transientRetryDelaysMs.length - 1) {
+        throw error;
+      }
+      await wait(delayMs);
+    }
   }
 
-  const { error } = await query;
-  return error;
+  return operation();
+}
+
+function isTransientNetworkError(error: unknown) {
+  const message = getErrorText(error).toLowerCase();
+  return (
+    message.includes("failed to fetch") ||
+    message.includes("network") ||
+    message.includes("proxy") ||
+    message.includes("err_proxy") ||
+    message.includes("fetcherror") ||
+    message.includes("load failed")
+  );
+}
+
+function getErrorText(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && error && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return "";
+}
+
+function wait(delayMs: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
 }
 
 export async function deleteJournalEntriesUpTo(userId: string, today: string) {
