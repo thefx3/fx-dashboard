@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
 import {
   BookOpen,
+  ChevronsLeft,
+  ChevronsRight,
   FileImage,
   Film,
   LayoutGrid,
@@ -40,6 +42,10 @@ import {
 
 type ViewMode = "cards" | "list" | "split";
 type CardKind = "chapter" | "course" | "module";
+type CardStat = {
+  label: string;
+  value?: string;
+};
 type ModalState =
   | { kind: "course"; mode: "create" }
   | { kind: "course"; mode: "edit"; item: PlaybookCourse }
@@ -57,7 +63,7 @@ type CardEntry = {
   kind: CardKind;
   onEdit: () => void;
   onOpen: () => void;
-  stats: string[];
+  stats: CardStat[];
   title: string;
 };
 
@@ -79,6 +85,7 @@ export default function DashboardPlaybooks() {
   const [modalState, setModalState] = useState<ModalState>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
 
@@ -290,9 +297,9 @@ export default function DashboardPlaybooks() {
       setChapterId("");
     },
     stats: [
-      `${course.modules.length} Modules`,
-      `${countCourseChapters(course)} Chapters`,
-      `${countCourseItems(course)} Items`,
+      { label: "Modules", value: String(course.modules.length) },
+      { label: "Chapters", value: String(countCourseChapters(course)) },
+      { label: "Items", value: String(countCourseItems(course)) },
     ],
     title: course.title,
   }));
@@ -307,28 +314,32 @@ export default function DashboardPlaybooks() {
       setModuleId(module.id);
       setChapterId("");
     },
-    stats: [`${module.chapters.length} Chapters`, `${countModuleItems(module)} Items`, "Module"],
+    stats: [
+      { label: "Chapters", value: String(module.chapters.length) },
+      { label: "Items", value: String(countModuleItems(module)) },
+      { label: "Module" },
+    ],
     title: module.title,
   }));
   const chapterCards = (selectedModule?.chapters ?? []).map((chapter): CardEntry => ({
     coverPath: chapter.coverPath,
     coverUrl: chapter.coverUrl,
-    description: `${chapter.items.length} content blocks in ${selectedModule?.title ?? "module"}`,
+    description: "Chapter",
     id: chapter.id,
     kind: "chapter",
     onEdit: () => setModalState({ kind: "chapter", mode: "edit", item: chapter }),
     onOpen: () => setChapterId(chapter.id),
     stats: [
-      `${chapter.items.length} Items`,
-      `${chapter.items.filter((entry) => entry.type === "text").length} Text`,
-      "Chapter",
+      { label: "Items", value: String(chapter.items.length) },
+      { label: "Text", value: String(chapter.items.filter((entry) => entry.type === "text").length) },
+      { label: "Chapter" },
     ],
     title: chapter.title,
   }));
 
   return (
-    <div className="grid gap-4">
-      <section className="flex flex-wrap items-start justify-between gap-3">
+    <div className="grid min-h-full gap-0">
+      <section className="flex flex-wrap items-start justify-between gap-3 border-b border-site px-3 py-3 sm:px-5">
         <div>
           <Breadcrumbs
             course={selectedCourse}
@@ -369,105 +380,142 @@ export default function DashboardPlaybooks() {
 
       {!loaded ? (
         <div className="surface p-6 text-sm text-site-muted">Loading playbooks...</div>
-      ) : !selectedCourse ? (
-        <CardBrowser
-          entries={courseCards}
-          emptyText="Add your first playbook course."
-          renderSplit={(course) => {
-            const target = courses.find((item) => item.id === course.id);
-            return (
+      ) : (
+        <div className={treeCollapsed ? "grid min-h-0 gap-0 xl:grid-cols-[56px_1fr]" : "grid min-h-0 gap-0 xl:grid-cols-[280px_1fr]"}>
+          <PlaybooksTreeNav
+            collapsed={treeCollapsed}
+            courses={courses}
+            onSelectChapter={(nextCourseId, nextModuleId, nextChapterId) => {
+              setCourseId(nextCourseId);
+              setModuleId(nextModuleId);
+              setChapterId(nextChapterId);
+            }}
+            onSelectCourse={(nextCourseId) => {
+              setCourseId(nextCourseId);
+              setModuleId("");
+              setChapterId("");
+            }}
+            onSelectModule={(nextCourseId, nextModuleId) => {
+              setCourseId(nextCourseId);
+              setModuleId(nextModuleId);
+              setChapterId("");
+            }}
+            onToggle={() => setTreeCollapsed((value) => !value)}
+            selectedChapterId={chapterId}
+            selectedCourseId={courseId}
+            selectedModuleId={moduleId}
+          />
+          <div className="min-w-0 p-3 sm:p-5">
+            {!selectedCourse ? (
               <CardBrowser
-                entries={(target?.modules ?? []).map((module): CardEntry => ({
-                  coverPath: module.coverPath,
-                  coverUrl: module.coverUrl,
-                  description: `${module.chapters.length} chapters`,
-                  id: module.id,
-                  kind: "module",
-                  onEdit: () => setModalState({ kind: "module", mode: "edit", item: module }),
-                  onOpen: () => {
-                    setCourseId(course.id);
-                    setModuleId(module.id);
-                    setChapterId("");
-                  },
-                  stats: [`${module.chapters.length} Chapters`, `${countModuleItems(module)} Items`, "Module"],
-                  title: module.title,
-                }))}
-                emptyText="No module in this course."
-                viewMode="cards"
+                entries={courseCards}
+                emptyText="Add your first playbook course."
+                renderSplit={(course) => {
+                  const target = courses.find((item) => item.id === course.id);
+                  return (
+                    <CardBrowser
+                      entries={(target?.modules ?? []).map((module): CardEntry => ({
+                        coverPath: module.coverPath,
+                        coverUrl: module.coverUrl,
+                        description: `${module.chapters.length} chapters`,
+                        id: module.id,
+                        kind: "module",
+                        onEdit: () => setModalState({ kind: "module", mode: "edit", item: module }),
+                        onOpen: () => {
+                          setCourseId(course.id);
+                          setModuleId(module.id);
+                          setChapterId("");
+                        },
+                        stats: [
+                          { label: "Chapters", value: String(module.chapters.length) },
+                          { label: "Items", value: String(countModuleItems(module)) },
+                          { label: "Module" },
+                        ],
+                        title: module.title,
+                      }))}
+                      emptyText="No module in this course."
+                      viewMode="list"
+                    />
+                  );
+                }}
+                viewMode={viewMode}
               />
-            );
-          }}
-          viewMode={viewMode}
-        />
-      ) : !selectedModule ? (
-        <CardBrowser
-          entries={moduleCards}
-          emptyText="Add the first module."
-          renderSplit={(module) => {
-            const target = selectedCourse.modules.find((item) => item.id === module.id);
-            return (
+            ) : !selectedModule ? (
               <CardBrowser
-                entries={(target?.chapters ?? []).map((chapter): CardEntry => ({
-                  coverPath: chapter.coverPath,
-                  coverUrl: chapter.coverUrl,
-                  description: `${chapter.items.length} content blocks`,
-                  id: chapter.id,
-                  kind: "chapter",
-                  onEdit: () => setModalState({ kind: "chapter", mode: "edit", item: chapter }),
-                  onOpen: () => {
-                    setModuleId(module.id);
-                    setChapterId(chapter.id);
-                  },
-                  stats: [`${chapter.items.length} Items`, `${chapter.items.filter((entry) => entry.type === "text").length} Text`, "Chapter"],
-                  title: chapter.title,
-                }))}
-                emptyText="No chapter in this module."
-                viewMode="cards"
+                entries={moduleCards}
+                emptyText="Add the first module."
+                renderSplit={(module) => {
+                  const target = selectedCourse.modules.find((item) => item.id === module.id);
+                  return (
+                    <CardBrowser
+                      entries={(target?.chapters ?? []).map((chapter): CardEntry => ({
+                        coverPath: chapter.coverPath,
+                        coverUrl: chapter.coverUrl,
+                        description: "Chapter",
+                        id: chapter.id,
+                        kind: "chapter",
+                        onEdit: () => setModalState({ kind: "chapter", mode: "edit", item: chapter }),
+                        onOpen: () => {
+                          setModuleId(module.id);
+                          setChapterId(chapter.id);
+                        },
+                        stats: [
+                          { label: "Items", value: String(chapter.items.length) },
+                          { label: "Text", value: String(chapter.items.filter((entry) => entry.type === "text").length) },
+                          { label: "Chapter" },
+                        ],
+                        title: chapter.title,
+                      }))}
+                      emptyText="No chapter in this module."
+                      viewMode="list"
+                    />
+                  );
+                }}
+                viewMode={viewMode}
               />
-            );
-          }}
-          viewMode={viewMode}
-        />
-      ) : !selectedChapter ? (
-        <CardBrowser
-          entries={chapterCards}
-          emptyText="Add the first chapter."
-          renderSplit={(chapter) => {
-            const target = selectedModule.chapters.find((item) => item.id === chapter.id);
-            return target ? (
+            ) : !selectedChapter ? (
+              <CardBrowser
+                entries={chapterCards}
+                emptyText="Add the first chapter."
+                renderSplit={(chapter) => {
+                  const target = selectedModule.chapters.find((item) => item.id === chapter.id);
+                  return target ? (
+                    <ChapterWorkspace
+                      chapter={target}
+                      linkTitle={linkTitle}
+                      linkValue={linkValue}
+                      onCreateLink={handleCreateLink}
+                      onCreateTextItem={handleCreateTextItem}
+                      onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
+                      onDrop={handleDrop}
+                      onFileSelect={(files) => void uploadFiles(files, target)}
+                      onLinkTitleChange={setLinkTitle}
+                      onLinkValueChange={setLinkValue}
+                      onSaveNotes={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
+                      syncing={syncing}
+                    />
+                  ) : null;
+                }}
+                viewMode={viewMode}
+              />
+            ) : (
               <ChapterWorkspace
-                chapter={target}
+                chapter={selectedChapter}
                 linkTitle={linkTitle}
                 linkValue={linkValue}
                 onCreateLink={handleCreateLink}
                 onCreateTextItem={handleCreateTextItem}
                 onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
                 onDrop={handleDrop}
-                onFileSelect={(files) => void uploadFiles(files, target)}
+                onFileSelect={(files) => void uploadFiles(files, selectedChapter)}
                 onLinkTitleChange={setLinkTitle}
                 onLinkValueChange={setLinkValue}
                 onSaveNotes={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
                 syncing={syncing}
               />
-            ) : null;
-          }}
-          viewMode={viewMode}
-        />
-      ) : (
-        <ChapterWorkspace
-          chapter={selectedChapter}
-          linkTitle={linkTitle}
-          linkValue={linkValue}
-          onCreateLink={handleCreateLink}
-          onCreateTextItem={handleCreateTextItem}
-          onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
-          onDrop={handleDrop}
-          onFileSelect={(files) => void uploadFiles(files, selectedChapter)}
-          onLinkTitleChange={setLinkTitle}
-          onLinkValueChange={setLinkValue}
-          onSaveNotes={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
-          syncing={syncing}
-        />
+            )}
+          </div>
+        </div>
       )}
 
       {modalState ? (
@@ -525,6 +573,85 @@ function Breadcrumbs({
         </>
       ) : null}
     </nav>
+  );
+}
+
+function PlaybooksTreeNav({
+  collapsed,
+  courses,
+  onSelectChapter,
+  onSelectCourse,
+  onSelectModule,
+  onToggle,
+  selectedChapterId,
+  selectedCourseId,
+  selectedModuleId,
+}: {
+  collapsed: boolean;
+  courses: PlaybookCourse[];
+  onSelectChapter: (courseId: string, moduleId: string, chapterId: string) => void;
+  onSelectCourse: (courseId: string) => void;
+  onSelectModule: (courseId: string, moduleId: string) => void;
+  onToggle: () => void;
+  selectedChapterId: string;
+  selectedCourseId: string;
+  selectedModuleId: string;
+}) {
+  return (
+    <aside className="sticky top-0 flex h-[calc(100vh-4rem)] flex-col overflow-hidden border-r border-site bg-card">
+      <div className={collapsed ? "flex justify-center border-b border-site p-2" : "flex items-center justify-between gap-3 border-b border-site px-4 py-3"}>
+        {!collapsed ? (
+          <p className="eyebrow text-site-muted">Library</p>
+        ) : null}
+        <button
+          type="button"
+          className="inline-flex h-9 w-9 items-center justify-center border border-site bg-site text-site-muted transition hover:text-site"
+          onClick={onToggle}
+          aria-label={collapsed ? "Expand playbooks navigation" : "Collapse playbooks navigation"}
+        >
+          {collapsed ? <ChevronsRight className="h-4 w-4" aria-hidden="true" /> : <ChevronsLeft className="h-4 w-4" aria-hidden="true" />}
+        </button>
+      </div>
+
+      {!collapsed ? (
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          {courses.length ? courses.map((course) => (
+            <div key={course.id} className="grid border-b border-site py-1 last:border-b-0">
+              <button
+                type="button"
+                className={selectedCourseId === course.id && !selectedModuleId ? "border border-ink bg-ink px-3 py-2.5 text-left text-sm font-semibold text-white" : "border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-site transition hover:border-site hover:bg-site"}
+                onClick={() => onSelectCourse(course.id)}
+              >
+                {course.title}
+              </button>
+              {course.modules.map((module) => (
+                <div key={module.id} className="grid">
+                  <button
+                    type="button"
+                    className={selectedModuleId === module.id && !selectedChapterId ? "ml-3 border border-ink bg-ink px-3 py-2 text-left text-sm font-semibold text-white" : "ml-3 border border-transparent px-3 py-2 text-left text-sm text-site-muted transition hover:border-site hover:bg-site hover:text-site"}
+                    onClick={() => onSelectModule(course.id, module.id)}
+                  >
+                    {module.title}
+                  </button>
+                  {module.chapters.map((chapter) => (
+                    <button
+                      key={chapter.id}
+                      type="button"
+                      className={selectedChapterId === chapter.id ? "ml-6 border border-ink bg-ink px-3 py-2 text-left text-xs font-semibold text-white" : "ml-6 border border-transparent px-3 py-2 text-left text-xs text-site-muted transition hover:border-site hover:bg-site hover:text-site"}
+                      onClick={() => onSelectChapter(course.id, module.id, chapter.id)}
+                    >
+                      {chapter.title}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )) : (
+            <EmptyState text="No course yet." />
+          )}
+        </div>
+      ) : null}
+    </aside>
   );
 }
 
@@ -608,11 +735,28 @@ function CardBrowser({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {entries.map((entry) => (
         <PlaybookCard key={entry.id} entry={entry} onClick={entry.onOpen} />
       ))}
     </div>
+  );
+}
+
+function formatCardStats(stats: CardStat[]) {
+  return stats.map((stat) => (stat.value ? `${stat.value} ${stat.label}` : stat.label)).join(" / ");
+}
+
+function PlaybookStatBadge({ stat }: { stat: CardStat }) {
+  return (
+    <span className="grid min-h-14 min-w-0 place-content-center border border-site bg-white/54 px-1.5 py-2 text-center leading-none">
+      {stat.value ? (
+        <span className="block text-base font-semibold tabular-nums leading-none text-site">{stat.value}</span>
+      ) : null}
+      <span className="mt-1 block whitespace-nowrap text-[0.56rem] font-semibold uppercase tracking-[0.1em] text-site-muted">
+        {stat.label}
+      </span>
+    </span>
   );
 }
 
@@ -631,10 +775,9 @@ function PlaybookCard({
     <div className="group relative">
       <button
         type="button"
-        className="relative grid min-h-52 w-full content-between gap-5 overflow-hidden border border-white/40 bg-[linear-gradient(135deg,#fffdf8_0%,#f6f3ee_50%,#ebe2d4_145%)] p-5 text-left shadow-[0_24px_70px_rgba(18,18,18,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] transition duration-300 [transform:translateZ(0)] hover:-translate-y-1 hover:border-ink/30 hover:shadow-[0_32px_90px_rgba(18,18,18,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]"
+        className="relative grid min-h-52 w-full content-between gap-4 overflow-hidden border border-white/40 bg-[linear-gradient(135deg,#fffdf8_0%,#f6f3ee_50%,#ebe2d4_145%)] p-4 text-left shadow-[0_24px_70px_rgba(18,18,18,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] transition duration-300 [transform:translateZ(0)] hover:-translate-y-1 hover:border-ink/30 hover:shadow-[0_32px_90px_rgba(18,18,18,0.14),inset_0_1px_0_rgba(255,255,255,0.95)] sm:p-5"
         onClick={onClick}
         onDoubleClick={onDoubleClick}
-        aria-label={`Open ${entry.title}`}
       >
       {entry.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -646,16 +789,16 @@ function PlaybookCard({
         <span className="mb-5 inline-flex h-10 w-10 items-center justify-center border border-site bg-white/45 text-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
           <BookOpen className="h-4 w-4" aria-hidden="true" />
         </span>
-        <span className="relative z-10 block text-2xl font-semibold leading-tight">{entry.title}</span>
+        <span className="relative z-10 block min-w-0 break-words text-2xl font-semibold leading-tight">{entry.title}</span>
         {!compact ? (
           <span className="relative z-10 mt-3 line-clamp-3 block text-sm leading-6 text-site-muted">
             {entry.description}
           </span>
         ) : null}
       </span>
-      <span className="relative z-10 grid grid-cols-3 gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-site-muted">
+      <span className="relative z-10 grid grid-cols-3 gap-2">
         {entry.stats.map((stat) => (
-          <span key={stat} className="border border-site bg-white/54 px-2 py-2">{stat}</span>
+          <PlaybookStatBadge key={`${stat.value ?? "type"}-${stat.label}`} stat={stat} />
         ))}
       </span>
       </button>
@@ -677,7 +820,7 @@ function PlaybookCard({
 function PlaybookListItem({ entry }: { entry: CardEntry }) {
   return (
     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border border-site bg-card p-3">
-      <button type="button" className="h-14 w-20 overflow-hidden border border-site bg-site" onClick={entry.onOpen} aria-label={`Open ${entry.title}`}>
+      <button type="button" className="h-14 w-20 overflow-hidden border border-site bg-site" onClick={entry.onOpen}>
         {entry.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="h-full w-full object-cover" src={entry.coverUrl} alt="" />
@@ -691,7 +834,7 @@ function PlaybookListItem({ entry }: { entry: CardEntry }) {
       </button>
       <div className="flex items-center gap-2">
         <span className="hidden text-xs font-semibold uppercase tracking-[0.12em] text-site-muted sm:inline">
-          {entry.stats.join(" / ")}
+          {formatCardStats(entry.stats)}
         </span>
         <button type="button" className="icon-button" onClick={entry.onEdit} aria-label={`Edit ${entry.title}`}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
@@ -947,7 +1090,7 @@ function PlaybookItemCard({
   const [notes, setNotes] = useState(item.notes);
 
   return (
-    <article className="grid gap-3 border border-site bg-card p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]">
+    <article className="grid items-stretch gap-3 border border-site bg-card p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]">
       <div className="min-w-0">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
@@ -962,13 +1105,13 @@ function PlaybookItemCard({
         </div>
         <MediaPreview item={item} />
       </div>
-      <div className="grid min-h-52">
+      <div className="grid min-h-0 grid-rows-[auto_1fr_auto] gap-3">
         <label className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-site-muted" htmlFor={`notes-${item.id}`}>
           Notes
         </label>
         <textarea
           id={`notes-${item.id}`}
-          className="form-input min-h-44 resize-y leading-6"
+          className="form-input h-full min-h-44 resize-y leading-6"
           placeholder="Write notes, checklist, key frames, mistakes to avoid..."
           value={notes}
           onBlur={() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { toIsoDate } from "@/lib/date";
@@ -12,10 +12,12 @@ type CalendarView = "overview" | "settings" | "journal" | "trades" | "stats" | "
 
 export default function DashboardSidebarCalendar({
   activeView,
+  onSelectDate,
   selectedDate,
   today,
 }: {
   activeView: CalendarView;
+  onSelectDate?: (date: string) => void;
   selectedDate: string;
   today: string;
 }) {
@@ -120,7 +122,13 @@ export default function DashboardSidebarCalendar({
               key={day.date}
               href={`${basePath}?date=${day.date}`}
               className={className}
-              onClick={() => window.dispatchEvent(new CustomEvent("fpair:stats-history-date", { detail: day.date }))}
+              onClick={(event) => {
+                if (onSelectDate && shouldUseClientNavigation(event)) {
+                  event.preventDefault();
+                  onSelectDate(day.date);
+                }
+                window.dispatchEvent(new CustomEvent("fpair:stats-history-date", { detail: day.date }));
+              }}
             >
               {day.day}
             </Link>
@@ -129,6 +137,10 @@ export default function DashboardSidebarCalendar({
       </div>
     </div>
   );
+}
+
+function shouldUseClientNavigation(event: MouseEvent<HTMLAnchorElement>) {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
 }
 
 function getMonthDays(selectedDate: string) {
