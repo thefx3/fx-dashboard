@@ -87,6 +87,7 @@ export default function DashboardPlaybooks() {
   const [linkValue, setLinkValue] = useState("");
   const [linkTitle, setLinkTitle] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [contentModalOpen, setContentModalOpen] = useState(false);
   const [modalState, setModalState] = useState<ModalState>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -107,7 +108,7 @@ export default function DashboardPlaybooks() {
     [chapterId, selectedModule],
   );
   const actionKind: CardKind = !selectedCourse ? "course" : !selectedModule ? "module" : "chapter";
-  const actionLabel = `Add ${actionKind}`;
+  const actionLabel = selectedChapter ? "Add content" : `Add ${actionKind}`;
   const countLabel = !selectedCourse
     ? `${courses.length} courses`
     : !selectedModule
@@ -396,7 +397,13 @@ export default function DashboardPlaybooks() {
           <button
             type="button"
             className="btn-primary bg-ink text-white"
-            onClick={() => setModalState({ kind: actionKind, mode: "create" } as ModalState)}
+            onClick={() => {
+              if (selectedChapter) {
+                setContentModalOpen(true);
+                return;
+              }
+              setModalState({ kind: actionKind, mode: "create" } as ModalState);
+            }}
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             {actionLabel}
@@ -519,15 +526,7 @@ export default function DashboardPlaybooks() {
                   return target ? (
                     <ChapterWorkspace
                       chapter={target}
-                      linkTitle={linkTitle}
-                      linkValue={linkValue}
-                      onCreateLink={handleCreateLink}
-                      onCreateTextItem={handleCreateTextItem}
                       onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
-                      onDrop={handleDrop}
-                      onFileSelect={(files) => void uploadFiles(files, target)}
-                      onLinkTitleChange={setLinkTitle}
-                      onLinkValueChange={setLinkValue}
                       onSaveNotes={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
                       syncing={syncing}
                     />
@@ -538,15 +537,7 @@ export default function DashboardPlaybooks() {
             ) : (
               <ChapterWorkspace
                 chapter={selectedChapter}
-                linkTitle={linkTitle}
-                linkValue={linkValue}
-                onCreateLink={handleCreateLink}
-                onCreateTextItem={handleCreateTextItem}
                 onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
-                onDrop={handleDrop}
-                onFileSelect={(files) => void uploadFiles(files, selectedChapter)}
-                onLinkTitleChange={setLinkTitle}
-                onLinkValueChange={setLinkValue}
                 onSaveNotes={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
                 syncing={syncing}
               />
@@ -561,6 +552,22 @@ export default function DashboardPlaybooks() {
           onClose={() => setModalState(null)}
           onDelete={handleDeleteCard}
           onSubmit={handleSubmitCard}
+          syncing={syncing}
+        />
+      ) : null}
+
+      {contentModalOpen && selectedChapter ? (
+        <ContentModal
+          chapter={selectedChapter}
+          linkTitle={linkTitle}
+          linkValue={linkValue}
+          onClose={() => setContentModalOpen(false)}
+          onCreateLink={handleCreateLink}
+          onCreateTextItem={handleCreateTextItem}
+          onDrop={handleDrop}
+          onFileSelect={(files) => void uploadFiles(files, selectedChapter)}
+          onLinkTitleChange={setLinkTitle}
+          onLinkValueChange={setLinkValue}
           syncing={syncing}
         />
       ) : null}
@@ -1004,142 +1011,166 @@ function CardModal({
   );
 }
 
-function ChapterWorkspace({
+function ContentModal({
   chapter,
   linkTitle,
   linkValue,
+  onClose,
   onCreateLink,
   onCreateTextItem,
-  onDeleteItem,
   onDrop,
   onFileSelect,
   onLinkTitleChange,
   onLinkValueChange,
-  onSaveNotes,
   syncing,
 }: {
-  chapter: PlaybookChapter | undefined;
+  chapter: PlaybookChapter;
   linkTitle: string;
   linkValue: string;
+  onClose: () => void;
   onCreateLink: (event: FormEvent<HTMLFormElement>) => void;
   onCreateTextItem: (title: string, notes: string) => void;
-  onDeleteItem: (item: PlaybookItem) => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onFileSelect: (files: File[]) => void;
   onLinkTitleChange: (value: string) => void;
   onLinkValueChange: (value: string) => void;
-  onSaveNotes: (item: PlaybookItem, notes: string) => void;
   syncing: boolean;
 }) {
   const [textNotes, setTextNotes] = useState("");
   const [textTitle, setTextTitle] = useState("");
 
   return (
-    <div className="grid gap-4">
-      {chapter ? (
-        <>
-          <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
-            <div className="surface p-5">
-              <div
-                className="border border-dashed border-site bg-site p-4"
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={onDrop}
-              >
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="font-semibold">Drop image or video files</p>
-                    <p className="mt-1 text-sm text-site-muted">
-                      Images are compressed to WebP. Videos are uploaded as source files.
-                    </p>
-                  </div>
-                  <label className="btn-secondary cursor-pointer border border-site bg-card text-site">
-                    <FileImage className="h-4 w-4" aria-hidden="true" />
-                    Choose files
-                    <input
-                      className="sr-only"
-                      type="file"
-                      multiple
-                      accept="image/*,video/mp4,video/webm,video/quicktime"
-                      onChange={(event) => {
-                        onFileSelect(Array.from(event.target.files ?? []));
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-4 backdrop-blur-sm">
+      <div className="surface grid max-h-[92vh] w-full max-w-5xl overflow-y-auto p-5 shadow-[0_28px_90px_rgba(18,18,18,0.28)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="eyebrow">Add content</p>
+            <h2 className="mt-2 text-2xl font-semibold">{chapter.title}</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Close add content modal">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
 
-              <form className="mt-3 grid gap-2 lg:grid-cols-[220px_1fr_auto]" onSubmit={onCreateLink}>
-                <label className="sr-only" htmlFor="playbook-link-title">Media title</label>
-                <input
-                  id="playbook-link-title"
-                  className="form-input"
-                  placeholder="Title"
-                  value={linkTitle}
-                  onChange={(event) => onLinkTitleChange(event.target.value)}
-                />
-                <label className="sr-only" htmlFor="playbook-link-url">YouTube, image or website link</label>
-                <input
-                  id="playbook-link-url"
-                  className="form-input"
-                  placeholder="Paste YouTube, image or link"
-                  value={linkValue}
-                  onChange={(event) => onLinkValueChange(event.target.value)}
-                />
-                <button className="btn-primary justify-center bg-ink text-white" type="submit">
-                  <LinkIcon className="h-4 w-4" aria-hidden="true" />
-                  Add
-                </button>
-              </form>
+        <section className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
+          <div className="border border-site bg-card p-4">
+            <div
+              className="border border-dashed border-site bg-site p-4"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={onDrop}
+            >
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-semibold">Drop image or video files</p>
+                  <p className="mt-1 text-sm text-site-muted">
+                    Images are compressed to WebP. Videos are uploaded as source files.
+                  </p>
+                </div>
+                <label className="btn-secondary cursor-pointer border border-site bg-card text-site">
+                  <FileImage className="h-4 w-4" aria-hidden="true" />
+                  Choose files
+                  <input
+                    className="sr-only"
+                    type="file"
+                    multiple
+                    accept="image/*,video/mp4,video/webm,video/quicktime"
+                    onChange={(event) => {
+                      onFileSelect(Array.from(event.target.files ?? []));
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
             </div>
 
-            <form
-              className="surface p-5"
-              onSubmit={(event) => {
-                event.preventDefault();
-                onCreateTextItem(textTitle, textNotes);
-                setTextTitle("");
-                setTextNotes("");
-              }}
-            >
-              <p className="eyebrow">Text chapter</p>
-              <label className="sr-only" htmlFor="playbook-text-title">Text title</label>
+            <form className="mt-3 grid gap-2 lg:grid-cols-[220px_1fr_auto]" onSubmit={onCreateLink}>
+              <label className="sr-only" htmlFor="playbook-modal-link-title">Media title</label>
               <input
-                id="playbook-text-title"
-                className="form-input mt-4"
-                placeholder="Text title"
-                value={textTitle}
-                onChange={(event) => setTextTitle(event.target.value)}
+                id="playbook-modal-link-title"
+                className="form-input"
+                placeholder="Title"
+                value={linkTitle}
+                onChange={(event) => onLinkTitleChange(event.target.value)}
               />
-              <label className="sr-only" htmlFor="playbook-text-notes">Text content</label>
-              <textarea
-                id="playbook-text-notes"
-                className="form-input mt-2 min-h-28 resize-y leading-6"
-                placeholder="Write text-only chapter notes"
-                value={textNotes}
-                onChange={(event) => setTextNotes(event.target.value)}
+              <label className="sr-only" htmlFor="playbook-modal-link-url">YouTube, image or website link</label>
+              <input
+                id="playbook-modal-link-url"
+                className="form-input"
+                placeholder="Paste YouTube, image or link"
+                value={linkValue}
+                onChange={(event) => onLinkValueChange(event.target.value)}
               />
-              <button className="btn-secondary mt-3 justify-center border border-site bg-card text-site" type="submit">
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Add text
+              <button className="btn-primary justify-center bg-ink text-white" type="submit" disabled={syncing}>
+                {syncing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LinkIcon className="h-4 w-4" aria-hidden="true" />}
+                Add
               </button>
             </form>
-          </section>
-
-          <div className="mt-5 grid gap-4">
-            {chapter.items.length ? chapter.items.map((item) => (
-              <PlaybookItemCard
-                key={item.id}
-                item={item}
-                onDelete={() => onDeleteItem(item)}
-                onSaveNotes={(notes) => onSaveNotes(item, notes)}
-                syncing={syncing}
-              />
-            )) : (
-              <EmptyState text="Add a YouTube link, image, video, or notes block." />
-            )}
           </div>
-        </>
+
+          <form
+            className="border border-site bg-card p-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onCreateTextItem(textTitle, textNotes);
+              setTextTitle("");
+              setTextNotes("");
+            }}
+          >
+            <p className="eyebrow">Text block</p>
+            <label className="sr-only" htmlFor="playbook-modal-text-title">Text title</label>
+            <input
+              id="playbook-modal-text-title"
+              className="form-input mt-4"
+              placeholder="Text title"
+              value={textTitle}
+              onChange={(event) => setTextTitle(event.target.value)}
+            />
+            <label className="sr-only" htmlFor="playbook-modal-text-notes">Text content</label>
+            <textarea
+              id="playbook-modal-text-notes"
+              className="form-input mt-2 min-h-36 resize-y leading-6"
+              placeholder="Write text-only chapter notes"
+              value={textNotes}
+              onChange={(event) => setTextNotes(event.target.value)}
+            />
+            <button className="btn-secondary mt-3 justify-center border border-site bg-card text-site" type="submit" disabled={syncing}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add text
+            </button>
+          </form>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ChapterWorkspace({
+  chapter,
+  onDeleteItem,
+  onSaveNotes,
+  syncing,
+}: {
+  chapter: PlaybookChapter | undefined;
+  onDeleteItem: (item: PlaybookItem) => void;
+  onSaveNotes: (item: PlaybookItem, notes: string) => void;
+  syncing: boolean;
+}) {
+  return (
+    <div className="grid gap-4">
+      {chapter ? (
+        <div className="grid gap-4">
+          {chapter.items.length ? chapter.items.map((item) => (
+            <PlaybookItemCard
+              key={item.id}
+              item={item}
+              onDelete={() => onDeleteItem(item)}
+              onSaveNotes={(notes) => onSaveNotes(item, notes)}
+              syncing={syncing}
+            />
+          )) : (
+            <EmptyState text="Add a YouTube link, image, video, or notes block." />
+          )}
+        </div>
       ) : (
         <EmptyState text="Create or select a chapter to add course material." />
       )}
