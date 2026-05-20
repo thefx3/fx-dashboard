@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { daysBetween, getCurrentUserId } from "@/lib/dashboard-data";
 import {
   getDayBreakdown,
@@ -63,29 +63,106 @@ export default function PublicHeroStats({ today }: { today: string }) {
       <p className="text-xs font-semibold uppercase tracking-[0.34em] text-white/72">
         {dayLabel}
       </p>
-      <div className="mt-8 grid grid-cols-3 divide-x divide-white/22 border-y border-white/22 bg-black/12 py-5 backdrop-blur-sm">
-        <Stat value={stats.green} label="Green" delta={todayCounts.green} />
-        <Stat value={stats.red} label="Red" delta={todayCounts.red} />
-        <Stat value={formatRatio(stats.ratio)} label="Ratio" />
+      <div className="mt-8 grid grid-cols-3 gap-2 [perspective:900px] sm:gap-3">
+        <Stat ready={loaded} value={stats.green} label="Green" delta={todayCounts.green} tone="green" />
+        <Stat ready={loaded} value={stats.red} label="Red" delta={todayCounts.red} tone="red" />
+        <Stat ready={loaded} value={stats.ratio} label="Ratio" tone="ratio" formatter={formatRatio} />
       </div>
     </div>
   );
 }
 
-function Stat({ value, label, delta }: { value: number | string; label: string; delta?: number }) {
+function Stat({
+  delta,
+  formatter = formatWholeNumber,
+  label,
+  ready,
+  tone,
+  value,
+}: {
+  delta?: number;
+  formatter?: (value: number) => string;
+  label: string;
+  ready: boolean;
+  tone: "green" | "ratio" | "red";
+  value: number;
+}) {
+  const animatedValue = useCountUp(value, ready);
+
   return (
-    <div className="relative">
+    <div className="group relative min-h-[112px] overflow-hidden border border-white/24 bg-white/[0.08] px-3 py-5 shadow-[0_22px_55px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-md transition duration-300 [transform:rotateX(8deg)_translateZ(0)] hover:-translate-y-1 hover:[transform:rotateX(0deg)_translateZ(18px)]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.34),rgba(255,255,255,0.04)_38%,rgba(0,0,0,0.18))]" />
+      <div className="pointer-events-none absolute -left-10 top-0 h-20 w-28 rotate-[-24deg] bg-white/16 blur-xl transition duration-300 group-hover:translate-x-16" />
+      <div
+        className={[
+          "pointer-events-none absolute inset-x-3 bottom-0 h-px",
+          tone === "green"
+            ? "bg-emerald-300/70 shadow-[0_0_24px_rgba(52,211,153,0.42)]"
+            : tone === "red"
+              ? "bg-red-300/70 shadow-[0_0_24px_rgba(248,113,113,0.42)]"
+              : "bg-amber-200/70 shadow-[0_0_24px_rgba(251,191,36,0.38)]",
+        ].join(" ")}
+      />
       {delta != null ? (
-        <span className="absolute right-4 top-0 text-xs font-semibold text-white/58">
+        <span className="absolute right-3 top-3 z-10 text-xs font-semibold text-white/68">
           + {delta}
         </span>
       ) : null}
-      <p className="text-4xl font-semibold leading-none">{value}</p>
-      <p className="mt-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/72">
+      <p className="relative z-10 text-4xl font-semibold leading-none text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.34)]">
+        {formatter(animatedValue)}
+      </p>
+      <p className="relative z-10 mt-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/72">
         {label}
       </p>
     </div>
   );
+}
+
+function useCountUp(target: number, ready: boolean) {
+  const [value, setValue] = useState(0);
+  const latestValue = useRef(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (!ready) {
+      latestValue.current = 0;
+      hasAnimated.current = false;
+      return;
+    }
+
+    const startValue = hasAnimated.current ? latestValue.current : 0;
+    const endValue = Number.isFinite(target) ? target : 0;
+    const duration = 900;
+    const startedAt = performance.now();
+    let frame = 0;
+
+    hasAnimated.current = true;
+
+    function tick(now: number) {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const nextValue = startValue + (endValue - startValue) * eased;
+      latestValue.current = nextValue;
+      setValue(nextValue);
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        latestValue.current = endValue;
+        setValue(endValue);
+      }
+    }
+
+    frame = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(frame);
+  }, [ready, target]);
+
+  return ready ? value : 0;
+}
+
+function formatWholeNumber(value: number) {
+  return String(Math.round(value));
 }
 
 function formatRatio(value: number) {

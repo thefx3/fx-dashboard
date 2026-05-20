@@ -8,7 +8,7 @@ import { toIsoDate } from "@/lib/date";
 import { getCurrentUserId } from "@/lib/dashboard-data";
 import { getDayBreakdown, getLatestFpairSnapshot, loadFpairSnapshot, subscribeFpairChanges, type FpairSnapshot } from "@/lib/fpair-data";
 
-type CalendarView = "overview" | "settings" | "journal" | "trades" | "stats" | "lists" | undefined;
+type CalendarView = "overview" | "settings" | "journal" | "trades" | "stats" | "lists" | "playbooks" | undefined;
 
 export default function DashboardSidebarCalendar({
   activeView,

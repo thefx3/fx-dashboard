@@ -1494,11 +1494,12 @@ function TradingStatsOnly({ stats }: { stats: ReturnType<typeof getTradingStats>
     <div className="surface p-6 sm:p-8">
       <p className="eyebrow">Accounts and execution</p>
       <h2 className="mt-2 text-2xl font-semibold">Trading stats</h2>
-      <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
         <Metric label="Total accounts" value={stats.totalAccounts} />
         <Metric label="Active" value={stats.activeAccounts} />
         <Metric label="Funded" value={stats.fundedAccounts} />
         <Metric label="Eval blown" value={stats.blownEvaluation} tone="red" />
+        <Metric label="Funded blown" value={stats.blownFunded} tone="red" />
         <Metric label="Total PNL" value={formatMoney(stats.totalPnl)} tone={stats.totalPnl < 0 ? "red" : "green"} />
         <Metric label="Win rate" value={`${stats.winRate}%`} />
       </div>
@@ -2002,10 +2003,12 @@ function AccountsPanel({
     <div className="surface p-6 sm:p-8">
       <p className="eyebrow">Accounts</p>
       <h2 className="mt-2 text-2xl font-semibold">Account status</h2>
-      <div className="mt-5 grid gap-2 sm:grid-cols-4">
+      <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
         <Metric label="Total" value={stats.totalAccounts} />
         <Metric label="Active" value={stats.activeAccounts} />
         <Metric label="Funded" value={stats.fundedAccounts} />
+        <Metric label="Eval blown" value={stats.blownEvaluation} tone="red" />
+        <Metric label="Funded blown" value={stats.blownFunded} tone="red" />
         <Metric label="Payouts" value={formatMoney(stats.payoutTotal)} />
       </div>
       <div className="mt-5">

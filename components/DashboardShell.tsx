@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   BarChart3,
+  BookOpen,
   CandlestickChart,
   ExternalLink,
   Home,
@@ -12,6 +13,7 @@ import {
 import BrandMark from "@/components/BrandMark";
 import DashboardFpairWorkspace from "@/components/DashboardFpairWorkspace";
 import DashboardLogoutButton from "@/components/DashboardLogoutButton";
+import DashboardPlaybooks from "@/components/DashboardPlaybooks";
 import DashboardSidebarCalendar from "@/components/DashboardSidebarCalendar";
 import DayCounter from "@/components/DayCounter";
 import JournalDataReset from "@/components/JournalDataReset";
@@ -33,7 +35,7 @@ type DashboardShellProps = {
   email: string;
   metrics: DashboardMetric[];
   isLive: boolean;
-  view?: "overview" | "settings" | "journal" | "trades" | "stats" | "lists";
+  view?: "overview" | "settings" | "journal" | "trades" | "stats" | "lists" | "playbooks";
   journalDate?: string;
 };
 
@@ -48,6 +50,7 @@ export default function DashboardShell({
   const isTrades = view === "trades";
   const isStats = view === "stats";
   const isLists = view === "lists";
+  const isPlaybooks = view === "playbooks";
 
   return (
     <main className="grid h-screen overflow-hidden bg-site text-site lg:grid-cols-[272px_1fr]">
@@ -87,6 +90,8 @@ export default function DashboardShell({
             <DashboardFpairWorkspace initialDate={journalDate ?? today} mode="stats" today={today} />
           ) : isLists ? (
             <DashboardFpairWorkspace mode="lists" today={today} />
+          ) : isPlaybooks ? (
+            <DashboardPlaybooks />
           ) : (
             <OverviewView today={today} />
           )}
@@ -184,6 +189,18 @@ function DashboardSidebar({
           <ExternalLink className="h-4 w-4" aria-hidden="true" />
           Public site
         </Link>
+        <Link
+          href="/dashboard/playbooks"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 border px-3 py-2.5 text-sm font-medium transition",
+            activeView === "playbooks"
+              ? "border-white/[0.16] bg-white/[0.08] text-white"
+              : "border-white/[0.12] bg-white/[0.06] text-white/[0.72] hover:border-white/[0.18] hover:bg-white/[0.1] hover:text-white",
+          )}
+        >
+          <BookOpen className="h-4 w-4" aria-hidden="true" />
+          Playbooks
+        </Link>
       </div>
 
       <div className="mt-auto border-t border-white/[0.12] pt-4">
@@ -250,6 +267,18 @@ function MobileDashboardMenu({ activeView }: { activeView: DashboardShellProps["
         >
           <ExternalLink className="h-4 w-4" aria-hidden="true" />
           Public site
+        </Link>
+        <Link
+          href="/dashboard/playbooks"
+          className={cn(
+            "flex items-center gap-3 border px-3 py-2.5 text-sm font-semibold transition",
+            activeView === "playbooks"
+              ? "border-site bg-ink text-white"
+              : "border-transparent text-site-muted hover:border-site hover:text-site",
+          )}
+        >
+          <BookOpen className="h-4 w-4" aria-hidden="true" />
+          Playbooks
         </Link>
       </div>
     </details>

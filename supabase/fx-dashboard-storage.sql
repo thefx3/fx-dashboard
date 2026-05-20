@@ -159,6 +159,215 @@ begin
     check (status in ('positive', 'negative'));
 end $$;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'playbook-media',
+  'playbook-media',
+  false,
+  524288000,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'video/mp4',
+    'video/webm',
+    'video/quicktime'
+  ]
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create table if not exists public.dashboard_playbook_courses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  category text not null default 'Trading',
+  description text not null default '',
+  cover_path text,
+  position integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.dashboard_playbook_courses
+  add column if not exists cover_path text;
+
+create table if not exists public.dashboard_playbook_modules (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  course_id uuid not null references public.dashboard_playbook_courses(id) on delete cascade,
+  title text not null,
+  cover_path text,
+  position integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.dashboard_playbook_modules
+  add column if not exists cover_path text;
+
+create table if not exists public.dashboard_playbook_chapters (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  module_id uuid not null references public.dashboard_playbook_modules(id) on delete cascade,
+  title text not null,
+  cover_path text,
+  position integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.dashboard_playbook_chapters
+  add column if not exists cover_path text;
+
+create table if not exists public.dashboard_playbook_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  chapter_id uuid not null references public.dashboard_playbook_chapters(id) on delete cascade,
+  type text not null check (type in ('youtube', 'video', 'image', 'link', 'text')),
+  title text not null default '',
+  source_url text not null default '',
+  storage_path text,
+  mime_type text,
+  notes text not null default '',
+  position integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists dashboard_playbook_courses_user_position_idx
+  on public.dashboard_playbook_courses(user_id, position, created_at);
+
+create index if not exists dashboard_playbook_modules_course_position_idx
+  on public.dashboard_playbook_modules(user_id, course_id, position, created_at);
+
+create index if not exists dashboard_playbook_chapters_module_position_idx
+  on public.dashboard_playbook_chapters(user_id, module_id, position, created_at);
+
+create index if not exists dashboard_playbook_items_chapter_position_idx
+  on public.dashboard_playbook_items(user_id, chapter_id, position, created_at);
+
+drop trigger if exists dashboard_playbook_courses_set_updated_at
+  on public.dashboard_playbook_courses;
+
+create trigger dashboard_playbook_courses_set_updated_at
+before update on public.dashboard_playbook_courses
+for each row execute function public.set_updated_at();
+
+drop trigger if exists dashboard_playbook_modules_set_updated_at
+  on public.dashboard_playbook_modules;
+
+create trigger dashboard_playbook_modules_set_updated_at
+before update on public.dashboard_playbook_modules
+for each row execute function public.set_updated_at();
+
+drop trigger if exists dashboard_playbook_chapters_set_updated_at
+  on public.dashboard_playbook_chapters;
+
+create trigger dashboard_playbook_chapters_set_updated_at
+before update on public.dashboard_playbook_chapters
+for each row execute function public.set_updated_at();
+
+drop trigger if exists dashboard_playbook_items_set_updated_at
+  on public.dashboard_playbook_items;
+
+create trigger dashboard_playbook_items_set_updated_at
+before update on public.dashboard_playbook_items
+for each row execute function public.set_updated_at();
+
+alter table public.dashboard_playbook_courses enable row level security;
+alter table public.dashboard_playbook_modules enable row level security;
+alter table public.dashboard_playbook_chapters enable row level security;
+alter table public.dashboard_playbook_items enable row level security;
+
+drop policy if exists "Users manage their playbook courses"
+  on public.dashboard_playbook_courses;
+
+drop policy if exists "Users manage their playbook modules"
+  on public.dashboard_playbook_modules;
+
+drop policy if exists "Users manage their playbook chapters"
+  on public.dashboard_playbook_chapters;
+
+drop policy if exists "Users manage their playbook items"
+  on public.dashboard_playbook_items;
+
+create policy "Users manage their playbook courses"
+on public.dashboard_playbook_courses
+for all to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "Users manage their playbook modules"
+on public.dashboard_playbook_modules
+for all to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "Users manage their playbook chapters"
+on public.dashboard_playbook_chapters
+for all to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "Users manage their playbook items"
+on public.dashboard_playbook_items
+for all to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users read their playbook media"
+  on storage.objects;
+
+drop policy if exists "Users upload their playbook media"
+  on storage.objects;
+
+drop policy if exists "Users update their playbook media"
+  on storage.objects;
+
+drop policy if exists "Users delete their playbook media"
+  on storage.objects;
+
+create policy "Users read their playbook media"
+on storage.objects
+for select to authenticated
+using (
+  bucket_id = 'playbook-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Users upload their playbook media"
+on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'playbook-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Users update their playbook media"
+on storage.objects
+for update to authenticated
+using (
+  bucket_id = 'playbook-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'playbook-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Users delete their playbook media"
+on storage.objects
+for delete to authenticated
+using (
+  bucket_id = 'playbook-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
 create index if not exists dashboard_journal_entries_user_date_idx
   on public.dashboard_journal_entries(user_id, entry_date desc);
 
