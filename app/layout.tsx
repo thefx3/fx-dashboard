@@ -1,16 +1,9 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import AccessibilityGuard from "@/components/AccessibilityGuard";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--var-font-sans",
-});
 
 export const metadata: Metadata = {
   title: "F PAIR_",
@@ -40,7 +33,6 @@ export default function RootLayout({
     <html
       lang="fr"
       suppressHydrationWarning
-      className={inter.variable}
     >
       <body className="antialiased">
         <ThemeProvider

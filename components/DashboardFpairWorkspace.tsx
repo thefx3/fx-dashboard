@@ -376,7 +376,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
           <div className="mt-auto border border-white/[0.14] p-3">
             <div className="h-3 overflow-hidden rounded-full bg-white/[0.18]">
               <div
-                className="h-full rounded-full bg-[#d9aa62] shadow-[0_0_18px_rgba(217,170,98,0.72)] transition-all"
+                className="h-full rounded-full bg-[#d9aa62] shadow-[0_0_18px_rgba(217,170,98,0.72)] transition-[width]"
                 style={{ width: `${Math.max(progress.score > 0 ? 4 : 0, progress.progress)}%` }}
               />
             </div>

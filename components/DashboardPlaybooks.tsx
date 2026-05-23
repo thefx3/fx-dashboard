@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  FileImage,
   Film,
   LayoutGrid,
   Link as LinkIcon,
@@ -34,6 +33,7 @@ import {
   loadPlaybooks,
   updatePlaybookChapter,
   updatePlaybookCourse,
+  updatePlaybookItemContent,
   updatePlaybookItemNotes,
   updatePlaybookModule,
   uploadPlaybookCover,
@@ -41,12 +41,13 @@ import {
   type PlaybookChapter,
   type PlaybookCourse,
   type PlaybookItem,
-  type PlaybookItemType,
   type PlaybookModule,
 } from "@/lib/playbooks-data";
 
 type ViewMode = "cards" | "list" | "split";
 type CardKind = "chapter" | "course" | "module";
+type ContentLayout = "single" | "double";
+type ContentSlotMode = "file" | "link" | "text";
 type CardStat = {
   label: string;
   value?: string;
@@ -79,15 +80,32 @@ type CardFormValues = {
   title: string;
 };
 
+type ContentSlotValues = {
+  file: File | null;
+  mode: ContentSlotMode;
+  text: string;
+  url: string;
+};
+
+const contentLayoutOptions: ContentLayout[] = ["single", "double"];
+const contentSlotModes: ContentSlotMode[] = ["text", "link", "file"];
+
+function createEmptyContentSlot(mode: ContentSlotMode = "text"): ContentSlotValues {
+  return { file: null, mode, text: "", url: "" };
+}
+
+function getVisibleContentSlots(layout: ContentLayout, slots: ContentSlotValues[]) {
+  return layout === "single" ? slots.slice(0, 1) : slots;
+}
+
 export default function DashboardPlaybooks() {
   const [courses, setCourses] = useState<PlaybookCourse[]>([]);
   const [courseId, setCourseId] = useState("");
   const [moduleId, setModuleId] = useState("");
   const [chapterId, setChapterId] = useState("");
-  const [linkValue, setLinkValue] = useState("");
-  const [linkTitle, setLinkTitle] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [contentModalOpen, setContentModalOpen] = useState(false);
+  const [editingContentRow, setEditingContentRow] = useState<PlaybookItem[] | null>(null);
   const [modalState, setModalState] = useState<ModalState>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -261,64 +279,143 @@ export default function DashboardPlaybooks() {
     });
   }
 
-  function handleCreateLink(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedChapter) return;
-    const sourceUrl = linkValue.trim();
-    if (!sourceUrl) return;
-    const type = getLinkItemType(sourceUrl);
-
-    void runSync(async () => {
-      await createPlaybookItem(userId!, {
-        chapterId: selectedChapter.id,
-        position: selectedChapter.items.length,
-        sourceUrl,
-        title: linkTitle.trim() || getDefaultItemTitle(type),
-        type,
-      });
-      setLinkValue("");
-      setLinkTitle("");
-    });
+  function getNextContentPosition(chapter: PlaybookChapter) {
+    return chapter.items.reduce((max, item) => Math.max(max, item.position), -1) + 1;
   }
 
-  function handleCreateTextItem(title: string, notes: string) {
-    if (!selectedChapter) return;
-    const textTitle = title.trim();
-    const textNotes = notes.trim();
-    if (!textTitle && !textNotes) return;
-
-    void runSync(async () => {
-      await createPlaybookItem(userId!, {
-        chapterId: selectedChapter.id,
-        notes: textNotes,
-        position: selectedChapter.items.length,
-        title: textTitle || "Text notes",
-        type: "text",
-      });
-    });
-  }
-
-  function handleDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    if (!selectedChapter) return;
-    void uploadFiles(Array.from(event.dataTransfer.files), selectedChapter);
-  }
-
-  async function uploadFiles(files: File[], chapter: PlaybookChapter) {
-    if (!files.length) return;
-
-    await runSync(async () => {
-      for (const [index, file] of files.entries()) {
-        const uploaded = await uploadPlaybookFile(userId!, file);
+  async function createContentSlot(
+    slot: ContentSlotValues,
+    chapterId: string,
+    layoutColumn: number,
+    layoutGroupId: string,
+    position: number,
+  ) {
+    if (slot.mode === "file") {
+      if (slot.file) {
+        const uploaded = await uploadPlaybookFile(userId!, slot.file);
         await createPlaybookItem(userId!, {
-          chapterId: chapter.id,
+          chapterId,
+          layoutColumn,
+          layoutGroupId,
           mimeType: uploaded.mimeType,
-          position: chapter.items.length + index,
+          position,
           storagePath: uploaded.path,
-          title: uploaded.originalName,
           type: uploaded.type,
         });
+        return;
       }
+
+      await createPlaybookItem(userId!, {
+        chapterId,
+        layoutColumn,
+        layoutGroupId,
+        position,
+        type: "file",
+      });
+      return;
+    }
+
+    if (slot.mode === "link") {
+      const sourceUrl = slot.url.trim();
+      await createPlaybookItem(userId!, {
+        chapterId,
+        layoutColumn,
+        layoutGroupId,
+        position,
+        sourceUrl,
+        type: sourceUrl ? getLinkItemType(sourceUrl) : "link",
+      });
+      return;
+    }
+
+    await createPlaybookItem(userId!, {
+      chapterId,
+      layoutColumn,
+      layoutGroupId,
+      notes: slot.text,
+      position,
+      type: "text",
+    });
+  }
+
+  async function updateContentSlot(item: PlaybookItem, slot: ContentSlotValues) {
+    if (slot.mode === "file") {
+      if (slot.file) {
+        const uploaded = await uploadPlaybookFile(userId!, slot.file);
+        await updatePlaybookItemContent(userId!, item, {
+          mimeType: uploaded.mimeType,
+          storagePath: uploaded.path,
+          type: uploaded.type,
+        });
+        return;
+      }
+
+      if (item.storagePath && (item.type === "file" || item.type === "image" || item.type === "video")) {
+        return;
+      }
+
+      await updatePlaybookItemContent(userId!, item, {
+        mimeType: null,
+        storagePath: null,
+        type: "file",
+      });
+      return;
+    }
+
+    if (slot.mode === "link") {
+      const sourceUrl = slot.url.trim();
+      await updatePlaybookItemContent(userId!, item, {
+        sourceUrl,
+        type: sourceUrl ? getLinkItemType(sourceUrl) : "link",
+      });
+      return;
+    }
+
+    await updatePlaybookItemContent(userId!, item, {
+      notes: slot.text,
+      type: "text",
+    });
+  }
+
+  function handleCreateContent(slots: ContentSlotValues[]) {
+    if (!selectedChapter) return;
+
+    void runSync(async () => {
+      const layoutGroupId = crypto.randomUUID();
+      const position = getNextContentPosition(selectedChapter);
+
+      for (const [layoutColumn, slot] of slots.entries()) {
+        await createContentSlot(slot, selectedChapter.id, layoutColumn, layoutGroupId, position);
+      }
+      setContentModalOpen(false);
+    });
+  }
+
+  function handleUpdateContentRow(items: PlaybookItem[], slots: ContentSlotValues[]) {
+    if (!items.length) return;
+
+    void runSync(async () => {
+      const chapterId = items[0].chapterId;
+      const layoutGroupId = items[0].layoutGroupId || items[0].id;
+      const position = items.reduce((min, item) => Math.min(min, item.position), items[0].position);
+      const desiredColumns = new Set(slots.map((_, index) => index));
+
+      for (const [layoutColumn, slot] of slots.entries()) {
+        const existing = items.find((item) => item.layoutColumn === layoutColumn);
+        if (existing) {
+          await updateContentSlot(existing, slot);
+        } else {
+          await createContentSlot(slot, chapterId, layoutColumn, layoutGroupId, position);
+        }
+      }
+
+      for (const item of items) {
+        if (!desiredColumns.has(item.layoutColumn)) {
+          await deletePlaybookItem(userId!, item);
+        }
+      }
+
+      setEditingContentRow(null);
     });
   }
 
@@ -449,7 +546,7 @@ export default function DashboardPlaybooks() {
             selectedCourseId={courseId}
             selectedModuleId={moduleId}
           />
-          <div className="min-h-0 min-w-0 overflow-y-auto p-3 sm:p-5">
+          <div className="min-h-0 min-w-0 overflow-y-auto px-6 py-3 sm:px-8 sm:py-4 xl:px-10">
             {!selectedCourse ? (
               <CardBrowser
                 entries={courseCards}
@@ -527,7 +624,8 @@ export default function DashboardPlaybooks() {
                     <ChapterWorkspace
                       chapter={target}
                       onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
-                      onSaveNotes={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
+                      onEditRow={setEditingContentRow}
+                      onSaveText={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
                       syncing={syncing}
                     />
                   ) : null;
@@ -538,7 +636,8 @@ export default function DashboardPlaybooks() {
               <ChapterWorkspace
                 chapter={selectedChapter}
                 onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
-                onSaveNotes={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
+                onEditRow={setEditingContentRow}
+                onSaveText={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
                 syncing={syncing}
               />
             )}
@@ -559,15 +658,17 @@ export default function DashboardPlaybooks() {
       {contentModalOpen && selectedChapter ? (
         <ContentModal
           chapter={selectedChapter}
-          linkTitle={linkTitle}
-          linkValue={linkValue}
           onClose={() => setContentModalOpen(false)}
-          onCreateLink={handleCreateLink}
-          onCreateTextItem={handleCreateTextItem}
-          onDrop={handleDrop}
-          onFileSelect={(files) => void uploadFiles(files, selectedChapter)}
-          onLinkTitleChange={setLinkTitle}
-          onLinkValueChange={setLinkValue}
+          onCreateContent={handleCreateContent}
+          syncing={syncing}
+        />
+      ) : null}
+
+      {editingContentRow ? (
+        <EditContentModal
+          items={editingContentRow}
+          onClose={() => setEditingContentRow(null)}
+          onSubmit={(slots) => handleUpdateContentRow(editingContentRow, slots)}
           syncing={syncing}
         />
       ) : null}
@@ -641,7 +742,7 @@ function PlaybooksTreeNav({
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden border-r border-site bg-card transition-[width] duration-300 ease-out">
-      <div className={collapsed ? "flex justify-center border-b border-site p-2 transition-all duration-300 ease-out" : "flex items-center justify-between gap-3 border-b border-site px-4 py-3 transition-all duration-300 ease-out"}>
+      <div className={collapsed ? "flex justify-center border-b border-site p-2 transition-[gap,padding] duration-300 ease-out" : "flex items-center justify-between gap-3 border-b border-site px-4 py-3 transition-[gap,padding] duration-300 ease-out"}>
         {!collapsed ? (
           <button
             type="button"
@@ -666,19 +767,29 @@ function PlaybooksTreeNav({
 
       {!collapsed ? (
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          {courses.length ? courses.map((course) => (
-            <div key={course.id} className="grid border-b border-site py-1 last:border-b-0">
-              <button
-                type="button"
-                className={selectedCourseId === course.id && !selectedModuleId ? "grid grid-cols-[1fr_auto] items-center gap-2 border border-ink bg-ink px-3 py-2.5 text-left text-sm font-semibold text-white" : "grid grid-cols-[1fr_auto] items-center gap-2 border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-site transition hover:border-brand/35 hover:bg-brand-soft hover:text-brand"}
-                onClick={() => {
-                  setOpenCourseId(openCourseId === course.id ? "" : course.id);
-                  onSelectCourse(course.id);
-                }}
-              >
-                <span className="min-w-0 truncate">{course.title}</span>
-                {openCourseId === course.id ? <ChevronDown className="h-4 w-4 transition-transform duration-200" aria-hidden="true" /> : <ChevronRight className="h-4 w-4 transition-transform duration-200" aria-hidden="true" />}
-              </button>
+          {courses.length ? courses.map((course) => {
+            const isCourseActive = selectedCourseId === course.id && !selectedModuleId;
+            const isCourseOpen = openCourseId === course.id;
+
+            return (
+              <div key={course.id} className="grid border-b border-site py-1 last:border-b-0">
+                <div className={isCourseActive ? "grid grid-cols-[1fr_auto] items-center border border-ink bg-ink text-white" : "grid grid-cols-[1fr_auto] items-center border border-transparent text-site transition hover:border-brand/35 hover:bg-brand-soft hover:text-brand"}>
+                  <button
+                    type="button"
+                    className="min-w-0 px-3 py-2.5 text-left text-sm font-semibold"
+                    onClick={() => onSelectCourse(course.id)}
+                  >
+                    <span className="block min-w-0 truncate">{course.title}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={isCourseActive ? "grid h-full min-h-10 w-10 place-items-center border-l border-white/18 text-white transition hover:bg-white/10" : "grid h-full min-h-10 w-10 place-items-center border-l border-site text-site-muted transition hover:bg-card hover:text-brand"}
+                    onClick={() => setOpenCourseId(isCourseOpen ? "" : course.id)}
+                    aria-label={isCourseOpen ? `Collapse ${course.title}` : `Expand ${course.title}`}
+                  >
+                    {isCourseOpen ? <ChevronDown className="h-4 w-4 transition-transform duration-200" aria-hidden="true" /> : <ChevronRight className="h-4 w-4 transition-transform duration-200" aria-hidden="true" />}
+                  </button>
+                </div>
               <div className={openCourseId === course.id ? "grid grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out" : "grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out"}>
                 <div className="min-h-0 overflow-hidden">
                   {course.modules.map((module) => (
@@ -711,7 +822,8 @@ function PlaybooksTreeNav({
                 </div>
               </div>
             </div>
-          )) : (
+            );
+          }) : (
             <EmptyState text="No course yet." />
           )}
         </div>
@@ -1013,35 +1125,37 @@ function CardModal({
 
 function ContentModal({
   chapter,
-  linkTitle,
-  linkValue,
   onClose,
-  onCreateLink,
-  onCreateTextItem,
-  onDrop,
-  onFileSelect,
-  onLinkTitleChange,
-  onLinkValueChange,
+  onCreateContent,
   syncing,
 }: {
   chapter: PlaybookChapter;
-  linkTitle: string;
-  linkValue: string;
   onClose: () => void;
-  onCreateLink: (event: FormEvent<HTMLFormElement>) => void;
-  onCreateTextItem: (title: string, notes: string) => void;
-  onDrop: (event: DragEvent<HTMLDivElement>) => void;
-  onFileSelect: (files: File[]) => void;
-  onLinkTitleChange: (value: string) => void;
-  onLinkValueChange: (value: string) => void;
+  onCreateContent: (slots: ContentSlotValues[]) => void;
   syncing: boolean;
 }) {
-  const [textNotes, setTextNotes] = useState("");
-  const [textTitle, setTextTitle] = useState("");
+  const [layout, setLayout] = useState<ContentLayout>("single");
+  const [slots, setSlots] = useState<ContentSlotValues[]>([
+    createEmptyContentSlot(),
+    createEmptyContentSlot(),
+  ]);
+  const visibleSlots = getVisibleContentSlots(layout, slots);
+
+  function updateSlot(index: number, values: Partial<ContentSlotValues>) {
+    setSlots((current) => current.map((slot, slotIndex) => (
+      slotIndex === index ? { ...slot, ...values } : slot
+    )));
+  }
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-4 backdrop-blur-sm">
-      <div className="surface grid max-h-[92vh] w-full max-w-5xl overflow-y-auto p-5 shadow-[0_28px_90px_rgba(18,18,18,0.28)]">
+      <form
+        className="surface grid max-h-[92vh] w-full max-w-5xl overflow-y-auto p-5 shadow-[0_28px_90px_rgba(18,18,18,0.28)]"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onCreateContent(visibleSlots);
+        }}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Add content</p>
@@ -1052,125 +1166,288 @@ function ContentModal({
           </button>
         </div>
 
-        <section className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
-          <div className="border border-site bg-card p-4">
-            <div
-              className="border border-dashed border-site bg-site p-4"
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={onDrop}
-            >
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="font-semibold">Drop image or video files</p>
-                  <p className="mt-1 text-sm text-site-muted">
-                    Images are compressed to WebP. Videos are uploaded as source files.
-                  </p>
-                </div>
-                <label className="btn-secondary cursor-pointer border border-site bg-card text-site">
-                  <FileImage className="h-4 w-4" aria-hidden="true" />
-                  Choose files
+        <ContentSlotEditor
+          idPrefix="playbook-content"
+          layout={layout}
+          onLayoutChange={setLayout}
+          onSlotChange={updateSlot}
+          slots={visibleSlots}
+        />
+
+        <button className="btn-primary mt-4 justify-center bg-ink text-white" type="submit" disabled={syncing}>
+          {syncing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
+          Add content
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function getSlotFromItem(item: PlaybookItem | undefined): ContentSlotValues {
+  if (!item) return createEmptyContentSlot();
+  if (item.type === "text") return { ...createEmptyContentSlot("text"), text: item.notes };
+  if (item.type === "file" || item.type === "image" || item.type === "video") {
+    return createEmptyContentSlot("file");
+  }
+  return { ...createEmptyContentSlot("link"), url: item.sourceUrl };
+}
+
+function ContentSlotEditor({
+  existingItems = [],
+  idPrefix,
+  layout,
+  onLayoutChange,
+  onSlotChange,
+  slots,
+}: {
+  existingItems?: PlaybookItem[];
+  idPrefix: string;
+  layout: ContentLayout;
+  onLayoutChange: (layout: ContentLayout) => void;
+  onSlotChange: (index: number, values: Partial<ContentSlotValues>) => void;
+  slots: ContentSlotValues[];
+}) {
+  return (
+    <>
+      <div className="mt-5 inline-grid w-fit grid-cols-2 border border-site bg-site p-1">
+        {contentLayoutOptions.map((item) => (
+          <button
+            key={item}
+            type="button"
+            className={layout === item ? "bg-ink px-4 py-2 text-sm font-semibold text-white" : "px-4 py-2 text-sm font-semibold text-site-muted transition hover:text-site"}
+            onClick={() => onLayoutChange(item)}
+          >
+            {item === "single" ? "1 block" : "2 blocks"}
+          </button>
+        ))}
+      </div>
+
+      <section className={layout === "double" ? "mt-4 grid grid-cols-2 gap-3" : "mt-4 grid gap-3"}>
+        {slots.map((slot, index) => {
+          const existingItem = existingItems.find((item) => item.layoutColumn === index);
+
+          return (
+            <div key={index} className="border border-site bg-card p-4">
+              <div className="grid grid-cols-3 border border-site bg-site p-1">
+                {contentSlotModes.map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={slot.mode === mode ? "bg-ink px-3 py-2 text-sm font-semibold capitalize text-white" : "px-3 py-2 text-sm font-semibold capitalize text-site-muted transition hover:text-site"}
+                    onClick={() => onSlotChange(index, { mode })}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+
+              {slot.mode === "text" ? (
+                <>
+                  <label className="sr-only" htmlFor={`${idPrefix}-text-${index}`}>Text content</label>
+                  <textarea
+                    id={`${idPrefix}-text-${index}`}
+                    className="form-input mt-3 min-h-48 resize-y leading-6"
+                    placeholder="Write text"
+                    value={slot.text}
+                    onChange={(event) => onSlotChange(index, { text: event.target.value })}
+                  />
+                </>
+              ) : null}
+
+              {slot.mode === "link" ? (
+                <>
+                  <label className="sr-only" htmlFor={`${idPrefix}-link-${index}`}>YouTube, image or website link</label>
+                  <input
+                    id={`${idPrefix}-link-${index}`}
+                    className="form-input mt-3"
+                    placeholder="Paste YouTube, image or link"
+                    value={slot.url}
+                    onChange={(event) => onSlotChange(index, { url: event.target.value })}
+                  />
+                </>
+              ) : null}
+
+              {slot.mode === "file" ? (
+                <label className="mt-3 grid min-h-48 cursor-pointer place-items-center border border-dashed border-site bg-site p-4 text-center text-sm font-semibold text-site-muted">
+                  <span>
+                    {slot.file
+                      ? slot.file.name
+                      : existingItem?.storagePath
+                        ? "Choose a replacement file"
+                        : "Choose image, video or file"}
+                  </span>
                   <input
                     className="sr-only"
                     type="file"
-                    multiple
-                    accept="image/*,video/mp4,video/webm,video/quicktime"
-                    onChange={(event) => {
-                      onFileSelect(Array.from(event.target.files ?? []));
-                      event.target.value = "";
-                    }}
+                    onChange={(event) => onSlotChange(index, { file: event.target.files?.[0] ?? null })}
                   />
                 </label>
-              </div>
+              ) : null}
             </div>
+          );
+        })}
+      </section>
+    </>
+  );
+}
 
-            <form className="mt-3 grid gap-2 lg:grid-cols-[220px_1fr_auto]" onSubmit={onCreateLink}>
-              <label className="sr-only" htmlFor="playbook-modal-link-title">Media title</label>
-              <input
-                id="playbook-modal-link-title"
-                className="form-input"
-                placeholder="Title"
-                value={linkTitle}
-                onChange={(event) => onLinkTitleChange(event.target.value)}
-              />
-              <label className="sr-only" htmlFor="playbook-modal-link-url">YouTube, image or website link</label>
-              <input
-                id="playbook-modal-link-url"
-                className="form-input"
-                placeholder="Paste YouTube, image or link"
-                value={linkValue}
-                onChange={(event) => onLinkValueChange(event.target.value)}
-              />
-              <button className="btn-primary justify-center bg-ink text-white" type="submit" disabled={syncing}>
-                {syncing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LinkIcon className="h-4 w-4" aria-hidden="true" />}
-                Add
-              </button>
-            </form>
+function EditContentModal({
+  items,
+  onClose,
+  onSubmit,
+  syncing,
+}: {
+  items: PlaybookItem[];
+  onClose: () => void;
+  onSubmit: (slots: ContentSlotValues[]) => void;
+  syncing: boolean;
+}) {
+  const sortedItems = useMemo(
+    () => [...items].sort((left, right) => left.layoutColumn - right.layoutColumn),
+    [items],
+  );
+  const [layout, setLayout] = useState<ContentLayout>(
+    () => sortedItems.some((item) => item.layoutColumn === 1) ? "double" : "single",
+  );
+  const [slots, setSlots] = useState<ContentSlotValues[]>(() => [
+    getSlotFromItem(sortedItems.find((item) => item.layoutColumn === 0)),
+    getSlotFromItem(sortedItems.find((item) => item.layoutColumn === 1)),
+  ]);
+  const visibleSlots = getVisibleContentSlots(layout, slots);
+
+  function updateSlot(index: number, values: Partial<ContentSlotValues>) {
+    setSlots((current) => current.map((slot, slotIndex) => (
+      slotIndex === index ? { ...slot, ...values } : slot
+    )));
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-4 backdrop-blur-sm">
+      <form
+        className="surface grid max-h-[92vh] w-full max-w-5xl overflow-y-auto p-5 shadow-[0_28px_90px_rgba(18,18,18,0.28)]"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(visibleSlots);
+        }}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="eyebrow">Edit content</p>
+            <h2 className="mt-2 text-2xl font-semibold">Block layout</h2>
           </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Close edit content modal">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
 
-          <form
-            className="border border-site bg-card p-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onCreateTextItem(textTitle, textNotes);
-              setTextTitle("");
-              setTextNotes("");
-            }}
-          >
-            <p className="eyebrow">Text block</p>
-            <label className="sr-only" htmlFor="playbook-modal-text-title">Text title</label>
-            <input
-              id="playbook-modal-text-title"
-              className="form-input mt-4"
-              placeholder="Text title"
-              value={textTitle}
-              onChange={(event) => setTextTitle(event.target.value)}
-            />
-            <label className="sr-only" htmlFor="playbook-modal-text-notes">Text content</label>
-            <textarea
-              id="playbook-modal-text-notes"
-              className="form-input mt-2 min-h-36 resize-y leading-6"
-              placeholder="Write text-only chapter notes"
-              value={textNotes}
-              onChange={(event) => setTextNotes(event.target.value)}
-            />
-            <button className="btn-secondary mt-3 justify-center border border-site bg-card text-site" type="submit" disabled={syncing}>
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Add text
-            </button>
-          </form>
-        </section>
-      </div>
+        <ContentSlotEditor
+          existingItems={sortedItems}
+          idPrefix="playbook-edit"
+          layout={layout}
+          onLayoutChange={setLayout}
+          onSlotChange={updateSlot}
+          slots={visibleSlots}
+        />
+
+        <button className="btn-primary mt-4 justify-center bg-ink text-white" type="submit" disabled={syncing}>
+          {syncing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Pencil className="h-4 w-4" aria-hidden="true" />}
+          Update content
+        </button>
+      </form>
     </div>
   );
+}
+
+function getContentRows(items: PlaybookItem[]) {
+  const rows = new Map<string, { id: string; items: PlaybookItem[]; position: number }>();
+
+  for (const item of items) {
+    const id = item.layoutGroupId || item.id;
+    const existing = rows.get(id);
+    if (existing) {
+      existing.items.push(item);
+      existing.position = Math.min(existing.position, item.position);
+    } else {
+      rows.set(id, { id, items: [item], position: item.position });
+    }
+  }
+
+  return [...rows.values()]
+    .map((row) => ({
+      ...row,
+      items: row.items.sort((left, right) => left.layoutColumn - right.layoutColumn),
+    }))
+    .sort((left, right) => left.position - right.position);
+}
+
+function isImageContent(item: PlaybookItem) {
+  return item.type === "image" && Boolean(item.signedUrl || item.sourceUrl || item.storagePath);
+}
+
+function isMixedImageTextRow(items: PlaybookItem[]) {
+  return items.length === 2 && items.some(isImageContent) && items.some((item) => item.type === "text");
+}
+
+function getContentRowClass(items: PlaybookItem[]) {
+  if (items.length < 2) return "grid gap-5";
+  if (isMixedImageTextRow(items)) return "flex items-start gap-4";
+  return "grid grid-cols-2 items-start gap-4";
+}
+
+function getContentBlockClass(item: PlaybookItem, items: PlaybookItem[]) {
+  if (!isMixedImageTextRow(items)) return "group relative min-w-0";
+  return isImageContent(item)
+    ? "group relative min-w-0 flex-none max-w-[50%]"
+    : "group relative min-w-0 flex-1";
 }
 
 function ChapterWorkspace({
   chapter,
   onDeleteItem,
-  onSaveNotes,
+  onEditRow,
+  onSaveText,
   syncing,
 }: {
   chapter: PlaybookChapter | undefined;
   onDeleteItem: (item: PlaybookItem) => void;
-  onSaveNotes: (item: PlaybookItem, notes: string) => void;
+  onEditRow: (items: PlaybookItem[]) => void;
+  onSaveText: (item: PlaybookItem, notes: string) => void;
   syncing: boolean;
 }) {
+  const rows = chapter ? getContentRows(chapter.items) : [];
+
   return (
-    <div className="grid gap-4">
+    <div className="mx-auto grid w-full max-w-none gap-6">
       {chapter ? (
-        <div className="grid gap-4">
-          {chapter.items.length ? chapter.items.map((item) => (
-            <PlaybookItemCard
-              key={item.id}
-              item={item}
-              onDelete={() => onDeleteItem(item)}
-              onSaveNotes={(notes) => onSaveNotes(item, notes)}
-              syncing={syncing}
-            />
-          )) : (
-            <EmptyState text="Add a YouTube link, image, video, or notes block." />
-          )}
-        </div>
+        <>
+          <header>
+            <p className="eyebrow text-site-muted">Chapter</p>
+            <h1 className="mt-2 text-3xl font-semibold leading-tight text-site">{chapter.title}</h1>
+          </header>
+          <div className="grid gap-8">
+            {rows.length ? rows.map((row) => (
+              <section
+                key={row.id}
+                className={getContentRowClass(row.items)}
+              >
+                {row.items.map((item) => (
+                  <PlaybookContentBlock
+                    key={item.id}
+                    className={getContentBlockClass(item, row.items)}
+                    compactImage={isMixedImageTextRow(row.items) && isImageContent(item)}
+                    item={item}
+                    onDelete={() => onDeleteItem(item)}
+                    onEdit={() => onEditRow(row.items)}
+                    onSaveText={(notes) => onSaveText(item, notes)}
+                    syncing={syncing}
+                  />
+                ))}
+              </section>
+            )) : (
+              <EmptyState text="Add a YouTube link, image, video, or text block." />
+            )}
+          </div>
+        </>
       ) : (
         <EmptyState text="Create or select a chapter to add course material." />
       )}
@@ -1178,62 +1455,79 @@ function ChapterWorkspace({
   );
 }
 
-function PlaybookItemCard({
+function PlaybookContentBlock({
+  className,
+  compactImage,
   item,
   onDelete,
-  onSaveNotes,
+  onEdit,
+  onSaveText,
   syncing,
 }: {
+  className: string;
+  compactImage: boolean;
   item: PlaybookItem;
   onDelete: () => void;
-  onSaveNotes: (notes: string) => void;
+  onEdit: () => void;
+  onSaveText: (notes: string) => void;
   syncing: boolean;
 }) {
-  const [notes, setNotes] = useState(item.notes);
+  const isEmptyMediaBlock = item.type !== "text" && !item.signedUrl && !item.sourceUrl && !item.storagePath;
 
   return (
-    <article className="grid items-stretch gap-3 border border-site bg-card p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]">
-      <div className="min-w-0">
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div>
-            <p className="font-semibold">{item.title || getDefaultItemTitle(item.type)}</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-site-muted">
-              {item.type}
-            </p>
-          </div>
-          <button className="icon-button" type="button" onClick={onDelete} aria-label={`Delete ${item.title || item.type}`}>
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-        <MediaPreview item={item} />
+    <article className={className}>
+      <div className="absolute right-2 top-2 z-10 inline-flex gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+        <button
+          className="inline-flex h-8 w-8 items-center justify-center border border-site bg-card/90 text-site-muted shadow-sm transition hover:text-site"
+          type="button"
+          onClick={onEdit}
+          aria-label={`Edit ${item.type} block`}
+        >
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          className="inline-flex h-8 w-8 items-center justify-center border border-site bg-card/90 text-site-muted shadow-sm transition hover:text-site"
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete ${item.type} block`}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
-      <div className="grid min-h-0 grid-rows-[auto_1fr_auto] gap-3">
-        <label className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-site-muted" htmlFor={`notes-${item.id}`}>
-          Notes
-        </label>
+      {item.type === "text" ? (
         <textarea
-          id={`notes-${item.id}`}
-          className="form-input h-full min-h-44 resize-y leading-6"
-          placeholder="Write notes, checklist, key frames, mistakes to avoid..."
-          value={notes}
-          onBlur={() => {
-            if (notes !== item.notes) onSaveNotes(notes);
+          key={`${item.id}-${item.notes}`}
+          className="min-h-52 w-full resize-none border-0 bg-transparent p-0 pr-20 text-base leading-8 text-site outline-none placeholder:text-site-muted/55 focus:outline-none"
+          defaultValue={item.notes}
+          placeholder="Write text"
+          onBlur={(event) => {
+            const nextText = event.currentTarget.value;
+            if (nextText !== item.notes) onSaveText(nextText);
           }}
-          onChange={(event) => setNotes(event.target.value)}
         />
-        {syncing ? <p className="mt-2 text-xs text-site-muted">Saving...</p> : null}
-      </div>
+      ) : isEmptyMediaBlock ? (
+        <button
+          className="grid min-h-52 w-full place-items-center border border-dashed border-site bg-site/60 px-6 py-10 text-center text-sm font-semibold text-site-muted transition hover:border-ink hover:bg-card hover:text-site"
+          type="button"
+          onClick={onEdit}
+        >
+          Add media, file, or link
+        </button>
+      ) : (
+        <MediaPreview compactImage={compactImage} item={item} />
+      )}
+      {syncing ? <p className="mt-2 text-xs text-site-muted">Saving...</p> : null}
     </article>
   );
 }
 
-function MediaPreview({ item }: { item: PlaybookItem }) {
+function MediaPreview({ compactImage = false, item }: { compactImage?: boolean; item: PlaybookItem }) {
   const url = item.signedUrl || item.sourceUrl;
 
   if (item.type === "text") {
     return (
-      <div className="min-h-28 border border-site bg-site p-4 text-sm leading-6 text-site-muted">
-        {item.notes || "Text notes"}
+      <div className="whitespace-pre-wrap text-base leading-8 text-site">
+        {item.notes}
       </div>
     );
   }
@@ -1242,9 +1536,9 @@ function MediaPreview({ item }: { item: PlaybookItem }) {
     const embedUrl = getYouTubeEmbedUrl(item.sourceUrl);
     return embedUrl ? (
       <iframe
-        className="aspect-video w-full border border-site bg-ink"
+        className="aspect-video w-full bg-ink"
         src={embedUrl}
-        title={item.title || "YouTube video"}
+        title="YouTube video"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
       />
@@ -1253,14 +1547,18 @@ function MediaPreview({ item }: { item: PlaybookItem }) {
 
   if (item.type === "video" && url) {
     return (
-      <video className="aspect-video w-full border border-site bg-ink" src={url} controls preload="metadata" />
+      <video className="aspect-video w-full bg-ink" src={url} controls preload="metadata" />
     );
   }
 
   if (item.type === "image" && url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img className="max-h-[420px] w-full border border-site object-contain" src={url} alt={item.title || "Playbook image"} />
+      <img
+        className={compactImage ? "max-h-[560px] max-w-full object-contain" : "max-h-[560px] w-full object-contain"}
+        src={url}
+        alt="Playbook image"
+      />
     );
   }
 
@@ -1268,15 +1566,17 @@ function MediaPreview({ item }: { item: PlaybookItem }) {
 }
 
 function LinkPreview({ item }: { item: PlaybookItem }) {
+  const href = item.signedUrl || item.sourceUrl;
+
   return (
     <a
-      className="flex min-h-28 items-center gap-3 border border-site bg-site p-4 text-sm font-semibold text-site transition hover:border-ink/30"
-      href={item.sourceUrl}
+      className="inline-flex max-w-full items-center gap-3 text-sm font-semibold text-brand underline-offset-4 transition hover:underline"
+      href={href}
       target="_blank"
       rel="noreferrer"
     >
       {item.type === "video" ? <Film className="h-5 w-5" aria-hidden="true" /> : <LinkIcon className="h-5 w-5" aria-hidden="true" />}
-      <span className="break-all">{item.sourceUrl || "Text note"}</span>
+      <span className="break-all">{item.sourceUrl || item.storagePath || "File"}</span>
     </a>
   );
 }
@@ -1287,14 +1587,6 @@ function EmptyState({ text }: { text: string }) {
       {text}
     </div>
   );
-}
-
-function getDefaultItemTitle(type: PlaybookItemType) {
-  if (type === "youtube") return "YouTube lesson";
-  if (type === "video") return "Video lesson";
-  if (type === "image") return "Image reference";
-  if (type === "link") return "Resource link";
-  return "Notes";
 }
 
 function countCourseChapters(course: PlaybookCourse) {

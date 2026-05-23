@@ -194,7 +194,7 @@ function DashboardSidebar({
   const isSettingsActive = activeView === "settings";
   return (
     <aside className={cn("hidden h-screen overflow-hidden border-r border-white/10 bg-ink p-4 text-white transition-[padding] duration-300 ease-out lg:flex lg:flex-col", collapsed && "items-center px-3")}>
-      <div className={cn("flex w-full items-center transition-all duration-300 ease-out", collapsed ? "justify-center" : "justify-between gap-3")}>
+      <div className={cn("flex w-full items-center transition-[gap] duration-300 ease-out", collapsed ? "justify-center" : "justify-between gap-3")}>
         {!collapsed ? <BrandMark tone="dark" className="text-white" /> : null}
         <button
           type="button"
@@ -220,7 +220,7 @@ function DashboardSidebar({
                 onNavigate(item.view);
               }}
               className={cn(
-                "flex w-full items-center gap-3 border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "flex w-full items-center gap-3 border border-transparent px-3 py-2.5 text-sm font-medium transition-[background-color,border-color,color,padding] duration-200",
                 collapsed && "justify-center px-2",
                 isActive
                   ? "border-white/[0.16] bg-white/[0.08] text-white"

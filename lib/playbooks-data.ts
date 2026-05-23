@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabase/client";
 
-export type PlaybookItemType = "youtube" | "video" | "image" | "link" | "text";
+export type PlaybookItemType = "youtube" | "video" | "image" | "file" | "link" | "text";
 
 export type PlaybookCourse = {
   category: string;
@@ -38,6 +38,8 @@ export type PlaybookChapter = {
 export type PlaybookItem = {
   chapterId: string;
   id: string;
+  layoutColumn: number;
+  layoutGroupId: string;
   mimeType: string | null;
   notes: string;
   position: number;
@@ -76,6 +78,8 @@ type ChapterRow = {
 type ItemRow = {
   chapter_id: string;
   id: string;
+  layout_column?: number | null;
+  layout_group_id?: string | null;
   mime_type: string | null;
   notes: string | null;
   position: number | null;
@@ -113,9 +117,10 @@ export async function loadPlaybooks(userId: string) {
         .returns<ChapterRow[]>(),
       supabase
         .from("dashboard_playbook_items")
-        .select("id,chapter_id,type,title,source_url,storage_path,mime_type,notes,position")
+        .select("id,chapter_id,type,title,source_url,storage_path,mime_type,notes,layout_group_id,layout_column,position")
         .eq("user_id", userId)
         .order("position", { ascending: true })
+        .order("layout_column", { ascending: true })
         .order("created_at", { ascending: true })
         .returns<ItemRow[]>(),
     ]);
@@ -137,6 +142,8 @@ export async function loadPlaybooks(userId: string) {
     const item: PlaybookItem = {
       chapterId: row.chapter_id,
       id: row.id,
+      layoutColumn: row.layout_column ?? 0,
+      layoutGroupId: row.layout_group_id ?? row.id,
       mimeType: row.mime_type,
       notes: row.notes ?? "",
       position: row.position ?? 0,
@@ -286,6 +293,8 @@ export async function createPlaybookItem(
   item: {
     chapterId: string;
     mimeType?: string | null;
+    layoutColumn?: number;
+    layoutGroupId?: string;
     notes?: string;
     position: number;
     sourceUrl?: string;
@@ -296,6 +305,8 @@ export async function createPlaybookItem(
 ) {
   const { error } = await supabase.from("dashboard_playbook_items").insert({
     chapter_id: item.chapterId,
+    layout_column: item.layoutColumn ?? 0,
+    layout_group_id: item.layoutGroupId ?? crypto.randomUUID(),
     mime_type: item.mimeType ?? null,
     notes: item.notes ?? "",
     position: item.position,
@@ -318,6 +329,37 @@ export async function updatePlaybookItemNotes(
     .update({ notes })
     .eq("user_id", userId)
     .eq("id", itemId);
+  if (error) throw error;
+}
+
+export async function updatePlaybookItemContent(
+  userId: string,
+  item: PlaybookItem,
+  content: {
+    mimeType?: string | null;
+    notes?: string;
+    sourceUrl?: string;
+    storagePath?: string | null;
+    type: PlaybookItemType;
+  },
+) {
+  const nextStoragePath = content.storagePath ?? null;
+  if (item.storagePath && item.storagePath !== nextStoragePath) {
+    await supabase.storage.from(playbookMediaBucket).remove([item.storagePath]);
+  }
+
+  const { error } = await supabase
+    .from("dashboard_playbook_items")
+    .update({
+      mime_type: content.mimeType ?? null,
+      notes: content.notes ?? "",
+      source_url: content.sourceUrl ?? "",
+      storage_path: nextStoragePath,
+      title: "",
+      type: content.type,
+    })
+    .eq("user_id", userId)
+    .eq("id", item.id);
   if (error) throw error;
 }
 
@@ -464,7 +506,9 @@ export async function uploadPlaybookFile(userId: string, file: File) {
     : file;
   const mediaType: PlaybookItemType = uploadFile.type.startsWith("image/")
     ? "image"
-    : "video";
+    : uploadFile.type.startsWith("video/")
+      ? "video"
+      : "file";
   const extension = getFileExtension(uploadFile.name, mediaType);
   const path = `${userId}/${crypto.randomUUID()}.${extension}`;
   const { error } = await supabase.storage
@@ -572,6 +616,7 @@ function normalizeItemType(value: string | null): PlaybookItemType {
     value === "youtube" ||
     value === "video" ||
     value === "image" ||
+    value === "file" ||
     value === "link" ||
     value === "text"
   ) {
@@ -599,7 +644,9 @@ function getYouTubeVideoId(value: string) {
 function getFileExtension(name: string, type: PlaybookItemType) {
   const extension = name.split(".").pop()?.toLowerCase();
   if (extension) return extension;
-  return type === "image" ? "webp" : "mp4";
+  if (type === "image") return "webp";
+  if (type === "video") return "mp4";
+  return "bin";
 }
 
 function isImageUrl(value: string) {

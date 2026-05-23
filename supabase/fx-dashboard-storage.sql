@@ -172,7 +172,17 @@ values (
     'image/gif',
     'video/mp4',
     'video/webm',
-    'video/quicktime'
+    'video/quicktime',
+    'application/pdf',
+    'text/plain',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/msword',
+    'application/vnd.ms-excel',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
   ]
 )
 on conflict (id) do update
@@ -228,16 +238,49 @@ create table if not exists public.dashboard_playbook_items (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   chapter_id uuid not null references public.dashboard_playbook_chapters(id) on delete cascade,
-  type text not null check (type in ('youtube', 'video', 'image', 'link', 'text')),
+  type text not null check (type in ('youtube', 'video', 'image', 'file', 'link', 'text')),
   title text not null default '',
   source_url text not null default '',
   storage_path text,
   mime_type text,
   notes text not null default '',
+  layout_group_id uuid,
+  layout_column integer not null default 0,
   position integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.dashboard_playbook_items
+  add column if not exists layout_group_id uuid;
+
+alter table public.dashboard_playbook_items
+  add column if not exists layout_column integer not null default 0;
+
+alter table public.dashboard_playbook_items
+  drop constraint if exists dashboard_playbook_items_type_check;
+
+alter table public.dashboard_playbook_items
+  add constraint dashboard_playbook_items_type_check
+  check (type in ('youtube', 'video', 'image', 'file', 'link', 'text'));
+
+update public.dashboard_playbook_items
+set layout_group_id = id,
+    layout_column = 0
+where layout_group_id is null;
+
+alter table public.dashboard_playbook_items
+  alter column layout_group_id set default gen_random_uuid();
+
+alter table public.dashboard_playbook_items
+  alter column layout_group_id set not null;
+
+alter table public.dashboard_playbook_items
+  drop constraint if exists dashboard_playbook_items_layout_column_check;
+
+alter table public.dashboard_playbook_items
+  add constraint dashboard_playbook_items_layout_column_check
+  check (layout_column in (0, 1));
 
 create index if not exists dashboard_playbook_courses_user_position_idx
   on public.dashboard_playbook_courses(user_id, position, created_at);
@@ -250,6 +293,9 @@ create index if not exists dashboard_playbook_chapters_module_position_idx
 
 create index if not exists dashboard_playbook_items_chapter_position_idx
   on public.dashboard_playbook_items(user_id, chapter_id, position, created_at);
+
+create index if not exists dashboard_playbook_items_layout_idx
+  on public.dashboard_playbook_items(user_id, chapter_id, position, layout_group_id, layout_column);
 
 drop trigger if exists dashboard_playbook_courses_set_updated_at
   on public.dashboard_playbook_courses;
