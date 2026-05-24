@@ -4,6 +4,10 @@ import { supabase } from "@/lib/supabase/client";
 
 export type PlaybookItemType = "youtube" | "video" | "image" | "file" | "link" | "text";
 
+const signedUrlCache = new Map<string, { expiresAt: number; url: string }>();
+const signedUrlTtlSeconds = 60 * 60;
+const signedUrlCacheTtlMs = 55 * 60 * 1000;
+
 export type PlaybookCourse = {
   category: string;
   coverPath: string | null;
@@ -346,6 +350,7 @@ export async function updatePlaybookItemContent(
   const nextStoragePath = content.storagePath ?? null;
   if (item.storagePath && item.storagePath !== nextStoragePath) {
     await supabase.storage.from(playbookMediaBucket).remove([item.storagePath]);
+    signedUrlCache.delete(item.storagePath);
   }
 
   const { error } = await supabase
@@ -366,6 +371,7 @@ export async function updatePlaybookItemContent(
 export async function deletePlaybookItem(userId: string, item: PlaybookItem) {
   if (item.storagePath) {
     await supabase.storage.from(playbookMediaBucket).remove([item.storagePath]);
+    signedUrlCache.delete(item.storagePath);
   }
 
   const { error } = await supabase
@@ -555,6 +561,11 @@ export function getYouTubeEmbedUrl(value: string) {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
 }
 
+export function getYouTubeThumbnailUrl(value: string) {
+  const videoId = getYouTubeVideoId(value);
+  return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : "";
+}
+
 export function getLinkItemType(value: string): PlaybookItemType {
   if (getYouTubeVideoId(value)) return "youtube";
   return isImageUrl(value) ? "image" : "link";
@@ -562,12 +573,31 @@ export function getLinkItemType(value: string): PlaybookItemType {
 
 async function getSignedUrls(paths: string[]) {
   const urls = new Map<string, string>();
+  const now = Date.now();
+  const missingPaths: string[] = [];
+
+  for (const path of new Set(paths)) {
+    const cached = signedUrlCache.get(path);
+    if (cached && cached.expiresAt > now) {
+      urls.set(path, cached.url);
+    } else {
+      signedUrlCache.delete(path);
+      missingPaths.push(path);
+    }
+  }
+
   await Promise.all(
-    paths.map(async (path) => {
+    missingPaths.map(async (path) => {
       const { data } = await supabase.storage
         .from(playbookMediaBucket)
-        .createSignedUrl(path, 60 * 60);
-      if (data?.signedUrl) urls.set(path, data.signedUrl);
+        .createSignedUrl(path, signedUrlTtlSeconds);
+      if (data?.signedUrl) {
+        signedUrlCache.set(path, {
+          expiresAt: now + signedUrlCacheTtlMs,
+          url: data.signedUrl,
+        });
+        urls.set(path, data.signedUrl);
+      }
     }),
   );
   return urls;

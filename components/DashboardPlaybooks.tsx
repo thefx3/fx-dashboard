@@ -30,6 +30,7 @@ import {
   deletePlaybookModule,
   getLinkItemType,
   getYouTubeEmbedUrl,
+  getYouTubeThumbnailUrl,
   loadPlaybooks,
   updatePlaybookChapter,
   updatePlaybookCourse,
@@ -1533,21 +1534,12 @@ function MediaPreview({ compactImage = false, item }: { compactImage?: boolean; 
   }
 
   if (item.type === "youtube") {
-    const embedUrl = getYouTubeEmbedUrl(item.sourceUrl);
-    return embedUrl ? (
-      <iframe
-        className="aspect-video w-full bg-ink"
-        src={embedUrl}
-        title="YouTube video"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-      />
-    ) : <LinkPreview item={item} />;
+    return <YouTubePreview item={item} />;
   }
 
   if (item.type === "video" && url) {
     return (
-      <video className="aspect-video w-full bg-ink" src={url} controls preload="metadata" />
+      <video className="aspect-video w-full bg-ink" src={url} controls preload="none" />
     );
   }
 
@@ -1563,6 +1555,50 @@ function MediaPreview({ compactImage = false, item }: { compactImage?: boolean; 
   }
 
   return <LinkPreview item={item} />;
+}
+
+function YouTubePreview({ item }: { item: PlaybookItem }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const embedUrl = getYouTubeEmbedUrl(item.sourceUrl);
+  const thumbnailUrl = getYouTubeThumbnailUrl(item.sourceUrl);
+
+  if (!embedUrl) return <LinkPreview item={item} />;
+
+  if (isPlaying) {
+    return (
+      <iframe
+        className="aspect-video w-full bg-ink"
+        src={`${embedUrl}?autoplay=1`}
+        title="YouTube video"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      />
+    );
+  }
+
+  return (
+    <button
+      className="group relative aspect-video w-full overflow-hidden bg-ink text-white"
+      type="button"
+      onClick={() => setIsPlaying(true)}
+      aria-label="Play YouTube video"
+    >
+      {thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="h-full w-full object-cover"
+          src={thumbnailUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      ) : null}
+      <span className="absolute inset-0 bg-black/10 transition group-hover:bg-black/0" />
+      <span className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center bg-red-600 text-white shadow-[0_12px_32px_rgba(0,0,0,0.28)] transition group-hover:scale-105">
+        <span className="ml-1 h-0 w-0 border-y-[12px] border-l-[20px] border-y-transparent border-l-white" />
+      </span>
+    </button>
+  );
 }
 
 function LinkPreview({ item }: { item: PlaybookItem }) {
