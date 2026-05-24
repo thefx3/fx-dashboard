@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   ChevronDown,
@@ -98,41 +98,6 @@ function getVisibleContentSlots(layout: ContentLayout, slots: ContentSlotValues[
   return layout === "single" ? slots.slice(0, 1) : slots;
 }
 
-function useMeasuredVerticalOverflow() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const [hasOverflow, setHasOverflow] = useState(false);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const content = contentRef.current;
-    if (!container || !content) return;
-
-    let frame = 0;
-    const update = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        const nextHasOverflow = content.scrollHeight > container.clientHeight + 1;
-        setHasOverflow((current) => (current === nextHasOverflow ? current : nextHasOverflow));
-      });
-    };
-
-    const observer = new ResizeObserver(update);
-    observer.observe(container);
-    observer.observe(content);
-    window.addEventListener("resize", update);
-    update();
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", update);
-      observer.disconnect();
-    };
-  }, []);
-
-  return { containerRef, contentRef, hasOverflow };
-}
-
 export default function DashboardPlaybooks() {
   const [courses, setCourses] = useState<PlaybookCourse[]>([]);
   const [courseId, setCourseId] = useState("");
@@ -147,11 +112,6 @@ export default function DashboardPlaybooks() {
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
-  const {
-    containerRef: contentScrollRef,
-    contentRef: contentInnerRef,
-    hasOverflow: contentNeedsScroll,
-  } = useMeasuredVerticalOverflow();
 
   const selectedCourse = useMemo(
     () => courses.find((course) => course.id === courseId),
@@ -586,12 +546,8 @@ export default function DashboardPlaybooks() {
             selectedCourseId={courseId}
             selectedModuleId={moduleId}
           />
-          <div
-            ref={contentScrollRef}
-            className={contentNeedsScroll ? "min-h-0 min-w-0 overflow-y-auto px-6 py-3 sm:px-8 sm:py-4 xl:px-10" : "min-h-0 min-w-0 overflow-y-hidden px-6 py-3 sm:px-8 sm:py-4 xl:px-10"}
-          >
-            <div ref={contentInnerRef} className="min-h-full">
-              {!selectedCourse ? (
+          <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-6 py-3 sm:px-8 sm:py-4 xl:px-10">
+            {!selectedCourse ? (
               <CardBrowser
                 entries={courseCards}
                 emptyText="Add your first playbook course."
@@ -625,7 +581,7 @@ export default function DashboardPlaybooks() {
                 }}
                 viewMode={viewMode}
               />
-              ) : !selectedModule ? (
+            ) : !selectedModule ? (
               <CardBrowser
                 entries={moduleCards}
                 emptyText="Add the first module."
@@ -658,7 +614,7 @@ export default function DashboardPlaybooks() {
                 }}
                 viewMode={viewMode}
               />
-              ) : !selectedChapter ? (
+            ) : !selectedChapter ? (
               <CardBrowser
                 entries={chapterCards}
                 emptyText="Add the first chapter."
@@ -676,7 +632,7 @@ export default function DashboardPlaybooks() {
                 }}
                 viewMode={viewMode}
               />
-              ) : (
+            ) : (
               <ChapterWorkspace
                 chapter={selectedChapter}
                 onDeleteItem={(item) => void runSync(() => deletePlaybookItem(userId!, item))}
@@ -684,8 +640,7 @@ export default function DashboardPlaybooks() {
                 onSaveText={(item, notes) => void runSync(() => updatePlaybookItemNotes(userId!, item.id, notes))}
                 syncing={syncing}
               />
-              )}
-            </div>
+            )}
           </div>
         </div>
       )}
