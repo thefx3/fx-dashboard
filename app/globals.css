@@ -122,6 +122,13 @@ h6 {
   color: #ffffff;
 }
 
+.surface-flat {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .fp-container {
   margin: 0 auto;
   max-width: 80rem;

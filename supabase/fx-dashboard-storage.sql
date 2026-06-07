@@ -20,6 +20,47 @@ alter table public.app_metrics
 add constraint app_metrics_app_check
 check (app in ('ftrader', 'fsystem', 'fx_dashboard'));
 
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create table if not exists public.fpair_screen_time_daily (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  activity_date date not null,
+  domain text not null,
+  active_seconds integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, activity_date, domain)
+);
+
+create index if not exists fpair_screen_time_daily_user_date_idx
+  on public.fpair_screen_time_daily (user_id, activity_date desc, active_seconds desc);
+
+alter table public.fpair_screen_time_daily enable row level security;
+
+drop policy if exists "Users manage their fpair screen time"
+  on public.fpair_screen_time_daily;
+
+create policy "Users manage their fpair screen time"
+  on public.fpair_screen_time_daily
+  for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists fpair_screen_time_daily_set_updated_at
+  on public.fpair_screen_time_daily;
+
+create trigger fpair_screen_time_daily_set_updated_at
+before update on public.fpair_screen_time_daily
+for each row execute function public.set_updated_at();
+
 create index if not exists app_metrics_app_captured_at_idx
   on public.app_metrics (app, captured_at desc);
 

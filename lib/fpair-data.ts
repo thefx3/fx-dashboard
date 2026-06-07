@@ -134,6 +134,12 @@ export type TradeSession = {
   review: string;
 };
 
+export type ScreenTimeDomain = {
+  activeSeconds: number;
+  date: string;
+  domain: string;
+};
+
 export type PropFirmPlan = {
   accountSizeUsd: number;
   dailyLossLimitUsd: number;
@@ -169,6 +175,7 @@ export type FpairSnapshot = {
   questResults: Record<string, QuestResult>;
   quests: Quest[];
   remoteProgress: StoredLevelProgress | null;
+  screenTime: ScreenTimeDomain[];
   sessions: TradeSession[];
   settings: DashboardSettings;
   trades: Trade[];
@@ -249,7 +256,7 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
     return cached.snapshot;
   }
 
-  const [dashboard, profileRows, healthRows, questRows, questResultRows, accountRows, tradeRows, payoutRows, eventRows, feedRows, planRows, listRows] =
+  const [dashboard, profileRows, healthRows, questRows, questResultRows, accountRows, tradeRows, payoutRows, eventRows, feedRows, planRows, listRows, screenTimeRows] =
     await Promise.all([
       loadDashboardSnapshot(userId, true),
       supabase.from("trading_profiles").select("*").eq("user_id", userId).limit(1),
@@ -263,6 +270,7 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
       supabase.from("trading_feed_events").select("*").eq("user_id", userId).eq("type", "session").order("occurred_at", { ascending: false }),
       supabase.from("trading_prop_firm_plans").select("*"),
       supabase.from("fpair_list_items").select("*").eq("user_id", userId).order("position", { ascending: true }),
+      supabase.from("fpair_screen_time_daily").select("*").eq("user_id", userId).order("activity_date", { ascending: false }),
     ]);
 
   if (healthRows.error) {
@@ -316,6 +324,7 @@ export async function loadFpairSnapshot(userId: string, options: { force?: boole
     questResults,
     quests,
     remoteProgress: rowToStoredLevelProgress(profileRow),
+    screenTime: screenTimeRows.error ? [] : (screenTimeRows.data ?? []).map(rowToScreenTimeDomain),
     sessions: feedRows.error ? [] : (feedRows.data ?? []).map(rowToSession),
     settings: dashboard.settings,
     trades,
@@ -411,6 +420,7 @@ export function subscribeFpairChanges(userId: string, onChange: () => void) {
     "fpair_quests",
     "fpair_quest_results",
     "fpair_list_items",
+    "fpair_screen_time_daily",
     "trading_profiles",
     "trading_accounts",
     "trading_trades",
@@ -1553,6 +1563,14 @@ function rowToSession(row: Record<string, unknown>): TradeSession {
     review: parsed?.review ?? "",
     status: parsed?.status === "done" || parsed?.status === "missed" ? parsed.status : "planned",
     title: parsed?.title ?? stringValue(row.title),
+  };
+}
+
+function rowToScreenTimeDomain(row: Record<string, unknown>): ScreenTimeDomain {
+  return {
+    activeSeconds: numberValue(row.active_seconds, 0),
+    date: stringValue(row.activity_date),
+    domain: stringValue(row.domain),
   };
 }
 

@@ -84,6 +84,7 @@ const emptySnapshot: FpairSnapshot = {
   questResults: {},
   quests: [],
   remoteProgress: null,
+  screenTime: [],
   sessions: [],
   settings: {
     lastDeleteDate: "",
@@ -250,7 +251,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   const activeQuests = useMemo(() => getActiveQuests(snapshot.quests, selectedDate), [snapshot.quests, selectedDate]);
   const tradingStats = useMemo(() => getTradingStats(snapshot), [snapshot]);
   const period = useMemo(() => getPeriod(selectedDate, statsRange), [selectedDate, statsRange]);
-  const periodStats = useMemo(() => mode === "overview" ? getStats(snapshot, period.from, period.to) : emptyPeriodStats(), [mode, period.from, period.to, snapshot]);
+  const allTimeStats = useMemo(() => mode === "overview" ? getStats(snapshot, snapshot.settings.startDate || today, today) : emptyPeriodStats(), [mode, snapshot, today]);
   const handleStatsTabChange = useCallback((nextTab: StatsTab) => {
     startStatsTransition(() => {
       setStatsTab(nextTab);
@@ -401,13 +402,13 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
       </section>
 
       <section className="grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
-        <Metric label="Total green" value={periodStats.green} />
-        <Metric label="Total red" value={periodStats.red} tone="red" />
-        <Metric label="Ratio" value={formatRoundedNumber(periodStats.ratio)} tone={periodStats.ratio < 1 ? "red" : "green"} />
-        <Metric label="Clean streak" value={periodStats.cleanDays} />
-        <Metric label="Avg green/day" value={periodStats.avgGreenPerDay.toFixed(1)} />
-        <Metric label="Avg red/day" value={periodStats.avgRedPerDay.toFixed(1)} tone="red" />
-        <Metric label="Avg ratio/day" value={formatRoundedNumber(periodStats.avgRatioPerDay)} />
+        <Metric label="Total green" value={allTimeStats.green} />
+        <Metric label="Total red" value={allTimeStats.red} tone="red" />
+        <Metric label="Ratio" value={formatRoundedNumber(allTimeStats.ratio)} tone={allTimeStats.ratio < 1 ? "red" : "green"} />
+        <Metric label="Clean streak" value={allTimeStats.cleanDays} />
+        <Metric label="Avg green/day" value={allTimeStats.avgGreenPerDay.toFixed(1)} />
+        <Metric label="Avg red/day" value={allTimeStats.avgRedPerDay.toFixed(1)} tone="red" />
+        <Metric label="Avg ratio/day" value={formatRoundedNumber(allTimeStats.avgRatioPerDay)} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -434,6 +435,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
       </section>
 
       <section className="grid gap-4">
+        <ScreenTimeOverviewPanel snapshot={snapshot} today={today} />
         <TradingStatsOnly stats={tradingStats} />
       </section>
     </>,
@@ -866,6 +868,14 @@ function formatDurationHours(value: number) {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours}h${String(minutes).padStart(2, "0")}min`;
+}
+
+function formatDurationSeconds(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0min";
+  const totalMinutes = Math.round(value / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h${String(minutes).padStart(2, "0")}min` : `${minutes}min`;
 }
 
 type CachedBreakdowns = Map<string, ReturnType<typeof getDayBreakdown>>;
@@ -1489,9 +1499,9 @@ function ListsWorkspace({
   );
 }
 
-function TradingStatsOnly({ stats }: { stats: ReturnType<typeof getTradingStats> }) {
+function TradingStatsOnly({ flat = false, stats }: { flat?: boolean; stats: ReturnType<typeof getTradingStats> }) {
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className={cn(flat ? "surface-flat p-1 sm:p-2" : "surface p-6 sm:p-8")}>
       <p className="eyebrow">Accounts and execution</p>
       <h2 className="mt-2 text-2xl font-semibold">Trading stats</h2>
       <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
@@ -1502,6 +1512,37 @@ function TradingStatsOnly({ stats }: { stats: ReturnType<typeof getTradingStats>
         <Metric label="Funded blown" value={stats.blownFunded} tone="red" />
         <Metric label="Total PNL" value={formatMoney(stats.totalPnl)} tone={stats.totalPnl < 0 ? "red" : "green"} />
         <Metric label="Win rate" value={`${stats.winRate}%`} />
+      </div>
+    </div>
+  );
+}
+
+function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot; today: string }) {
+  const todayRows = snapshot.screenTime.filter((row) => row.date === today);
+  const allRows = snapshot.screenTime;
+  const totalTodaySeconds = todayRows.reduce((sum, row) => sum + row.activeSeconds, 0);
+  const totalAllSeconds = allRows.reduce((sum, row) => sum + row.activeSeconds, 0);
+  const topDomains = todayRows
+    .slice()
+    .sort((left, right) => right.activeSeconds - left.activeSeconds)
+    .slice(0, 6);
+
+  return (
+    <div className="surface p-6 sm:p-8">
+      <p className="eyebrow">Chrome screen time</p>
+      <h2 className="mt-2 text-2xl font-semibold">Active tabs</h2>
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        <Metric label="Today" value={formatDurationSeconds(totalTodaySeconds)} />
+        <Metric label="All time" value={formatDurationSeconds(totalAllSeconds)} />
+        <Metric label="Domains today" value={topDomains.length} />
+      </div>
+      <div className="mt-5 grid gap-2">
+        {topDomains.length ? topDomains.map((row) => (
+          <div key={`${row.date}-${row.domain}`} className="grid gap-3 border-b border-site py-2 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+            <span className="min-w-0 truncate font-semibold">{row.domain}</span>
+            <span className="text-site-muted">{formatDurationSeconds(row.activeSeconds)}</span>
+          </div>
+        )) : <EmptyState text="No Chrome screen time synced today." />}
       </div>
     </div>
   );
@@ -1549,7 +1590,7 @@ function TradesWorkspace({
         <section className="grid gap-4 xl:grid-cols-[360px_1fr]">
           <TradeForm accounts={accounts} onSaveTrade={onSaveTrade} today={today} trades={trades} />
           <div className="grid gap-4">
-            <TradingStatsOnly stats={stats} />
+            <TradingStatsOnly stats={stats} flat />
             <TradeHistory trades={trades} />
           </div>
         </section>
@@ -1586,7 +1627,7 @@ function CalendarHistoryDetail({
   const streak = getCleanStreakAtDate(snapshot, selectedDate);
 
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className="surface-flat p-1 sm:p-2">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-semibold">{formatLongDate(selectedDate)}</h2>
@@ -1677,7 +1718,7 @@ function CalendarPlanned({ selectedDate, snapshot, today }: { selectedDate: stri
     .flatMap(([date, entry]) => entry.wants.filter((task) => task.completed === null).map((task) => ({ date, task })));
 
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className="surface-flat p-1 sm:p-2">
       <p className="eyebrow">Planned</p>
       <h2 className="mt-2 text-2xl font-semibold">Upcoming from {selectedDate}</h2>
       <div className="mt-6 grid gap-4 xl:grid-cols-2">
@@ -1807,7 +1848,7 @@ function TradeForm({
   const blocked = !selectedAccountId || selectedAccountTradedToday || dailyLimitReached;
 
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className="surface-flat p-1 sm:p-2">
       <p className="eyebrow">Trades</p>
       <h2 className="mt-2 text-2xl font-semibold">Add a trade</h2>
       <div className="mt-5 grid gap-3">
@@ -1882,7 +1923,7 @@ function AccountForm({ onSaveAccount, plans }: { onSaveAccount: (account: Accoun
   const selectedPlan = sizePlans.find((plan) => plan.id === planId) ?? sizePlans[0];
 
   return (
-    <div className="surface border-b-0 p-6 sm:p-8">
+    <div className="surface-flat p-1 sm:p-2">
       <p className="eyebrow">Accounts</p>
       <h2 className="mt-2 text-2xl font-semibold">Add an account</h2>
       <div className="mt-5 grid gap-3">
@@ -1960,7 +2001,7 @@ function AddPropFirmForm({ onSave }: { onSave: (plan: Parameters<typeof saveProp
   void onSave;
 
   return (
-    <div className="surface p-6 opacity-50 grayscale sm:p-8">
+    <div className="surface-flat p-1 opacity-50 grayscale sm:p-2">
       <p className="eyebrow">Prop firms</p>
       <h2 className="mt-2 text-2xl font-semibold">Add prop firm plan</h2>
       <div className="mt-5 grid gap-3">
@@ -2000,7 +2041,7 @@ function AccountsPanel({
   const visibleAccounts = useMemo(() => accounts.filter((account) => matchesAccountFilter(account, filter)), [accounts, filter]);
 
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className="surface-flat p-1 sm:p-2">
       <p className="eyebrow">Accounts</p>
       <h2 className="mt-2 text-2xl font-semibold">Account status</h2>
       <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
@@ -2016,7 +2057,7 @@ function AccountsPanel({
       </div>
       <div className="mt-6 grid gap-3">
         {visibleAccounts.length ? visibleAccounts.map((account) => (
-          <div key={account.id} className="fp-panel p-4">
+          <div key={account.id} className="border-b border-site py-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="font-semibold">{account.name}</p>
@@ -2040,7 +2081,7 @@ function AccountsPanel({
 
 function TradeHistory({ title = "Trade history", trades }: { title?: string; trades: FpairSnapshot["trades"] }) {
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className="surface-flat p-1 sm:p-2">
       <p className="eyebrow">History</p>
       <h2 className="mt-2 text-2xl font-semibold">{title}</h2>
       <div className="mt-5 grid gap-2">
@@ -2081,7 +2122,7 @@ function SessionsPanel() {
 
   return (
     <div className="grid gap-4">
-      <div className="surface p-6 sm:p-8">
+      <div className="surface-flat p-1 sm:p-2">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Sessions</p>
@@ -2099,7 +2140,7 @@ function SessionsPanel() {
         </p>
       </div>
 
-      <div className="surface p-6 sm:p-8">
+      <div className="surface-flat p-1 sm:p-2">
         <p className="eyebrow">Simulator date</p>
         <div className="mt-4 grid gap-4">
           <ChipField label="Month" items={monthOptions.map((month, index) => ({ label: month, value: String(index) }))} value={simMonth} onChange={setSimMonth} />
@@ -2128,7 +2169,7 @@ function SessionsPanel() {
         </div>
       </div>
 
-      <div className="surface p-6 sm:p-8">
+      <div className="surface-flat p-1 sm:p-2">
         <p className="eyebrow">Sessions</p>
         <div className="mt-5 grid gap-2">
           {tradingSessions.map((session) => (
@@ -2160,7 +2201,7 @@ function RiskPanel() {
   const contracts = Number(stopPoints) > 0 ? riskAmount / (Number(stopPoints) * pointValue) : 0;
 
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className="surface-flat p-1 sm:p-2">
       <p className="eyebrow">Risk</p>
       <h2 className="mt-2 text-2xl font-semibold">Size calculator</h2>
       <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
