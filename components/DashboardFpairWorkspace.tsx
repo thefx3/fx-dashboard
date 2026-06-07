@@ -1522,6 +1522,10 @@ function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot;
   const allRows = snapshot.screenTime;
   const totalTodaySeconds = todayRows.reduce((sum, row) => sum + row.activeSeconds, 0);
   const totalAllSeconds = allRows.reduce((sum, row) => sum + row.activeSeconds, 0);
+  const totalTodayClicks = todayRows.reduce((sum, row) => sum + row.clickCount, 0);
+  const totalTodaySwitches = todayRows.reduce((sum, row) => sum + row.tabSwitches, 0);
+  const todayHours = totalTodaySeconds / 3600;
+  const avgSecondsPerDomain = todayRows.length ? totalTodaySeconds / todayRows.length : 0;
   const topDomains = todayRows
     .slice()
     .sort((left, right) => right.activeSeconds - left.activeSeconds)
@@ -1531,15 +1535,23 @@ function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot;
     <div className="surface p-6 sm:p-8">
       <p className="eyebrow">Chrome screen time</p>
       <h2 className="mt-2 text-2xl font-semibold">Active tabs</h2>
-      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+      <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
         <Metric label="Today" value={formatDurationSeconds(totalTodaySeconds)} />
         <Metric label="All time" value={formatDurationSeconds(totalAllSeconds)} />
         <Metric label="Domains today" value={topDomains.length} />
+        <Metric label="Tab switches" value={totalTodaySwitches} />
+        <Metric label="Clicks" value={totalTodayClicks} />
+        <Metric label="Avg/domain" value={formatDurationSeconds(avgSecondsPerDomain)} />
+        <Metric label="Clicks/hour" value={todayHours ? formatRoundedNumber(totalTodayClicks / todayHours) : 0} />
+        <Metric label="Switch/hour" value={todayHours ? formatRoundedNumber(totalTodaySwitches / todayHours) : 0} />
       </div>
       <div className="mt-5 grid gap-2">
         {topDomains.length ? topDomains.map((row) => (
           <div key={`${row.date}-${row.domain}`} className="grid gap-3 border-b border-site py-2 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
-            <span className="min-w-0 truncate font-semibold">{row.domain}</span>
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{row.domain}</p>
+              <p className="text-xs text-site-muted">{row.clickCount} clicks / {row.tabSwitches} switches</p>
+            </div>
             <span className="text-site-muted">{formatDurationSeconds(row.activeSeconds)}</span>
           </div>
         )) : <EmptyState text="No Chrome screen time synced today." />}

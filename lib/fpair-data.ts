@@ -136,8 +136,10 @@ export type TradeSession = {
 
 export type ScreenTimeDomain = {
   activeSeconds: number;
+  clickCount: number;
   date: string;
   domain: string;
+  tabSwitches: number;
 };
 
 export type PropFirmPlan = {
@@ -1569,8 +1571,10 @@ function rowToSession(row: Record<string, unknown>): TradeSession {
 function rowToScreenTimeDomain(row: Record<string, unknown>): ScreenTimeDomain {
   return {
     activeSeconds: numberValue(row.active_seconds, 0),
+    clickCount: numberValue(row.click_count, 0),
     date: stringValue(row.activity_date),
     domain: stringValue(row.domain),
+    tabSwitches: numberValue(row.tab_switch_count, 0),
   };
 }
 

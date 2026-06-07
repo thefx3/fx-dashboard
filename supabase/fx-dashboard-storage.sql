@@ -35,10 +35,18 @@ create table if not exists public.fpair_screen_time_daily (
   activity_date date not null,
   domain text not null,
   active_seconds integer not null default 0,
+  click_count integer not null default 0,
+  tab_switch_count integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, activity_date, domain)
 );
+
+alter table public.fpair_screen_time_daily
+  add column if not exists click_count integer not null default 0;
+
+alter table public.fpair_screen_time_daily
+  add column if not exists tab_switch_count integer not null default 0;
 
 create index if not exists fpair_screen_time_daily_user_date_idx
   on public.fpair_screen_time_daily (user_id, activity_date desc, active_seconds desc);
