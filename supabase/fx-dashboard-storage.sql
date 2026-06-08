@@ -36,6 +36,7 @@ create table if not exists public.fpair_screen_time_daily (
   domain text not null,
   active_seconds integer not null default 0,
   click_count integer not null default 0,
+  interaction_count integer not null default 0,
   tab_switch_count integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -44,6 +45,9 @@ create table if not exists public.fpair_screen_time_daily (
 
 alter table public.fpair_screen_time_daily
   add column if not exists click_count integer not null default 0;
+
+alter table public.fpair_screen_time_daily
+  add column if not exists interaction_count integer not null default 0;
 
 alter table public.fpair_screen_time_daily
   add column if not exists tab_switch_count integer not null default 0;

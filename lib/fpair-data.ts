@@ -139,6 +139,7 @@ export type ScreenTimeDomain = {
   clickCount: number;
   date: string;
   domain: string;
+  interactionCount: number;
   tabSwitches: number;
 };
 
@@ -1574,6 +1575,7 @@ function rowToScreenTimeDomain(row: Record<string, unknown>): ScreenTimeDomain {
     clickCount: numberValue(row.click_count, 0),
     date: stringValue(row.activity_date),
     domain: stringValue(row.domain),
+    interactionCount: numberValue(row.interaction_count, 0),
     tabSwitches: numberValue(row.tab_switch_count, 0),
   };
 }

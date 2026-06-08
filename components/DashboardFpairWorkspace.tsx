@@ -573,6 +573,7 @@ function StatsWorkspace({
   const statusStats = useMemo(() => getGroupedStats(buckets, breakdowns), [breakdowns, buckets]);
   const ratioTrend = useMemo(() => buildStatusTrend(buckets, breakdowns), [breakdowns, buckets]);
   const pnlTrend = useMemo(() => buildPnlTrend(snapshot, buckets), [buckets, snapshot]);
+  const screenTimeStats = useMemo(() => buildScreenTimeStats(snapshot, buckets, period.from, period.to), [buckets, period.from, period.to, snapshot]);
   const selfCareTrend = useMemo(() => buildSelfCareTrend(snapshot, buckets), [buckets, snapshot]);
   const periodUnit = getStatsUnit(range);
   const tabItems: Array<[StatsTab, string]> = [
@@ -655,7 +656,18 @@ function StatsWorkspace({
           </div>
         </div>
       </section>
+      <ScreenTimeStatsPanel periodUnit={periodUnit} stats={screenTimeStats} />
       <section className="grid gap-4">
+        <StatsChartCard
+          title="Screen behavior"
+          eyebrow="Curve"
+          series={[
+            { color: "#3A6EA5", formatValue: formatDurationSeconds, key: "activeSeconds", label: "Active time" },
+            { color: "#a4772b", formatValue: formatRoundedNumber, key: "interactions", label: "Interactions" },
+            { color: "#b91c1c", formatValue: formatRoundedNumber, key: "switches", label: "Switches" },
+          ]}
+          points={screenTimeStats.trend}
+        />
         <StatsChartCard
           title="Ratio evolution"
           eyebrow="Curve"
@@ -1052,6 +1064,46 @@ function buildSelfCareTrend(snapshot: FpairSnapshot, buckets: Array<{ from: stri
       sleep: totals.sleep / Math.max(1, totals.sleepCount),
     };
   });
+}
+
+function buildScreenTimeStats(snapshot: FpairSnapshot, buckets: Array<{ from: string; label: string; to: string }>, from: string, to: string) {
+  const periodRows = snapshot.screenTime.filter((row) => row.date >= from && row.date <= to);
+  const totalSeconds = periodRows.reduce((sum, row) => sum + row.activeSeconds, 0);
+  const clickCount = periodRows.reduce((sum, row) => sum + row.clickCount, 0);
+  const interactionCount = periodRows.reduce((sum, row) => sum + row.interactionCount, 0);
+  const tabSwitches = periodRows.reduce((sum, row) => sum + row.tabSwitches, 0);
+  const domains = new Map<string, { activeSeconds: number; clickCount: number; domain: string; interactionCount: number; tabSwitches: number }>();
+
+  periodRows.forEach((row) => {
+    const current = domains.get(row.domain) ?? { activeSeconds: 0, clickCount: 0, domain: row.domain, interactionCount: 0, tabSwitches: 0 };
+    current.activeSeconds += row.activeSeconds;
+    current.clickCount += row.clickCount;
+    current.interactionCount += row.interactionCount;
+    current.tabSwitches += row.tabSwitches;
+    domains.set(row.domain, current);
+  });
+
+  const hours = totalSeconds / 3600;
+  return {
+    clickCount,
+    domainCount: domains.size,
+    interactionCount,
+    interactionsPerHour: hours ? interactionCount / hours : 0,
+    switchPerHour: hours ? tabSwitches / hours : 0,
+    tabSwitches,
+    topDomains: Array.from(domains.values()).sort((left, right) => right.activeSeconds - left.activeSeconds).slice(0, 5),
+    totalSeconds,
+    trend: buckets.map((bucket) => {
+      const rows = snapshot.screenTime.filter((row) => row.date >= bucket.from && row.date <= bucket.to);
+      return {
+        activeSeconds: rows.reduce((sum, row) => sum + row.activeSeconds, 0),
+        clicks: rows.reduce((sum, row) => sum + row.clickCount, 0),
+        interactions: rows.reduce((sum, row) => sum + row.interactionCount, 0),
+        label: bucket.label,
+        switches: rows.reduce((sum, row) => sum + row.tabSwitches, 0),
+      };
+    }),
+  };
 }
 
 function buildBuckets(from: string, to: string, range: StatsRange) {
@@ -1523,13 +1575,14 @@ function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot;
   const totalTodaySeconds = todayRows.reduce((sum, row) => sum + row.activeSeconds, 0);
   const totalAllSeconds = allRows.reduce((sum, row) => sum + row.activeSeconds, 0);
   const totalTodayClicks = todayRows.reduce((sum, row) => sum + row.clickCount, 0);
+  const totalTodayInteractions = todayRows.reduce((sum, row) => sum + row.interactionCount, 0);
   const totalTodaySwitches = todayRows.reduce((sum, row) => sum + row.tabSwitches, 0);
   const todayHours = totalTodaySeconds / 3600;
   const avgSecondsPerDomain = todayRows.length ? totalTodaySeconds / todayRows.length : 0;
   const topDomains = todayRows
     .slice()
     .sort((left, right) => right.activeSeconds - left.activeSeconds)
-    .slice(0, 6);
+    .slice(0, 5);
 
   return (
     <div className="surface p-6 sm:p-8">
@@ -1541,6 +1594,7 @@ function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot;
         <Metric label="Domains today" value={topDomains.length} />
         <Metric label="Tab switches" value={totalTodaySwitches} />
         <Metric label="Clicks" value={totalTodayClicks} />
+        <Metric label="Interactions" value={totalTodayInteractions} />
         <Metric label="Avg/domain" value={formatDurationSeconds(avgSecondsPerDomain)} />
         <Metric label="Clicks/hour" value={todayHours ? formatRoundedNumber(totalTodayClicks / todayHours) : 0} />
         <Metric label="Switch/hour" value={todayHours ? formatRoundedNumber(totalTodaySwitches / todayHours) : 0} />
@@ -1550,13 +1604,46 @@ function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot;
           <div key={`${row.date}-${row.domain}`} className="grid gap-3 border-b border-site py-2 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="min-w-0">
               <p className="truncate font-semibold">{row.domain}</p>
-              <p className="text-xs text-site-muted">{row.clickCount} clicks / {row.tabSwitches} switches</p>
+              <p className="text-xs text-site-muted">{row.interactionCount} interactions / {row.clickCount} clicks / {row.tabSwitches} switches</p>
             </div>
             <span className="text-site-muted">{formatDurationSeconds(row.activeSeconds)}</span>
           </div>
         )) : <EmptyState text="No Chrome screen time synced today." />}
       </div>
     </div>
+  );
+}
+
+function ScreenTimeStatsPanel({ periodUnit, stats }: { periodUnit: string; stats: ReturnType<typeof buildScreenTimeStats> }) {
+  return (
+    <section className="surface p-6 sm:p-8">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow">Chrome behavior</p>
+          <h2 className="mt-2 text-2xl font-semibold">Screen activity</h2>
+        </div>
+        <p className="text-sm text-site-muted">Only recent interactive activity is counted.</p>
+      </div>
+      <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+        <Metric label="Active time" value={formatDurationSeconds(stats.totalSeconds)} />
+        <Metric label={`Avg/${periodUnit}`} value={formatDurationSeconds(stats.totalSeconds / Math.max(1, stats.trend.length))} />
+        <Metric label="Domains" value={stats.domainCount} />
+        <Metric label="Interactions" value={stats.interactionCount} />
+        <Metric label="Interactions/hour" value={formatRoundedNumber(stats.interactionsPerHour)} />
+        <Metric label="Switches/hour" value={formatRoundedNumber(stats.switchPerHour)} />
+      </div>
+      <div className="mt-6 grid gap-2">
+        {stats.topDomains.length ? stats.topDomains.map((row) => (
+          <div key={row.domain} className="grid gap-3 border-b border-site py-2 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{row.domain}</p>
+              <p className="text-xs text-site-muted">{row.interactionCount} interactions / {row.clickCount} clicks / {row.tabSwitches} switches</p>
+            </div>
+            <span className="text-site-muted">{formatDurationSeconds(row.activeSeconds)}</span>
+          </div>
+        )) : <EmptyState text="No Chrome screen activity synced for this period." />}
+      </div>
+    </section>
   );
 }
 
