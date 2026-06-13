@@ -136,11 +136,13 @@ export type TradeSession = {
 
 export type ScreenTimeDomain = {
   activeSeconds: number;
-  clickCount: number;
+  blockedCount: number;
   date: string;
   domain: string;
-  interactionCount: number;
-  tabSwitches: number;
+  focusAvoidCount: number;
+  focusParkedCount: number;
+  focusSeconds: number;
+  tabCount: number;
 };
 
 export type PropFirmPlan = {
@@ -1572,11 +1574,13 @@ function rowToSession(row: Record<string, unknown>): TradeSession {
 function rowToScreenTimeDomain(row: Record<string, unknown>): ScreenTimeDomain {
   return {
     activeSeconds: numberValue(row.active_seconds, 0),
-    clickCount: numberValue(row.click_count, 0),
+    blockedCount: numberValue(row.blocked_count, 0),
     date: stringValue(row.activity_date),
     domain: stringValue(row.domain),
-    interactionCount: numberValue(row.interaction_count, 0),
-    tabSwitches: numberValue(row.tab_switch_count, 0),
+    focusAvoidCount: numberValue(row.focus_avoid_count, 0),
+    focusParkedCount: numberValue(row.focus_parked_count, 0),
+    focusSeconds: numberValue(row.focus_seconds, 0),
+    tabCount: numberValue(row.tab_count, 0),
   };
 }
 

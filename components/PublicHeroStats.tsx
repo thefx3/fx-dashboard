@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/cn";
 import { daysBetween, getCurrentUserId } from "@/lib/dashboard-data";
 import {
   getDayBreakdown,
@@ -25,6 +26,7 @@ export default function PublicHeroStats({ today }: { today: string }) {
     ? getStats(snapshot, startDate, today)
     : { green: 0, ratio: 0, red: 0 };
   const todayCounts = snapshot ? getDayBreakdown(snapshot, today) : { green: 0, red: 0 };
+  const momentum = getMomentum(stats.green, stats.red, todayCounts.green, todayCounts.red);
   const dayLabel =
     loaded && startDate
       ? `Day ${daysBetween(startDate, today)}`
@@ -68,6 +70,29 @@ export default function PublicHeroStats({ today }: { today: string }) {
         <Stat ready={loaded} value={stats.red} label="Red" delta={todayCounts.red} tone="red" />
         <Stat ready={loaded} value={stats.ratio} label="Ratio" tone="ratio" formatter={formatRatio} />
       </div>
+      <div className={cn(
+        "fp-reveal fp-reveal-delay-3 mt-4 border border-white/20 bg-black/24 px-4 py-3 text-left shadow-[0_16px_44px_rgba(0,0,0,0.28)] backdrop-blur-md",
+        momentum.tone === "green" && "text-emerald-50",
+        momentum.tone === "red" && "text-red-50",
+        momentum.tone === "neutral" && "text-amber-50",
+      )}>
+        <div className="flex items-center justify-between gap-4 text-xs font-semibold uppercase tracking-[0.18em] text-white/68">
+          <span>{momentum.label}</span>
+          <span>{momentum.score > 0 ? "+" : ""}{momentum.score}</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden bg-white/16">
+          <div
+            className={cn(
+              "fp-progress-shine h-full transition-[width] duration-500",
+              momentum.tone === "green" && "bg-emerald-300",
+              momentum.tone === "red" && "bg-red-300",
+              momentum.tone === "neutral" && "bg-amber-200",
+            )}
+            style={{ width: `${momentum.width}%` }}
+          />
+        </div>
+        <p className="mt-3 text-sm leading-5 text-white/78">{momentum.message}</p>
+      </div>
     </div>
   );
 }
@@ -90,7 +115,7 @@ function Stat({
   const animatedValue = useCountUp(value, ready);
 
   return (
-    <div className="group relative min-h-[112px] overflow-hidden border border-white/24 bg-white/[0.08] px-3 py-5 shadow-[0_22px_55px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-md transition duration-300 [transform:rotateX(8deg)_translateZ(0)] hover:-translate-y-1 hover:[transform:rotateX(0deg)_translateZ(18px)]">
+    <div className="group fp-reveal relative min-h-[112px] overflow-hidden border border-white/24 bg-white/[0.08] px-3 py-5 shadow-[0_22px_55px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-md transition duration-300 [transform:rotateX(8deg)_translateZ(0)] hover:-translate-y-1 hover:[transform:rotateX(0deg)_translateZ(18px)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.34),rgba(255,255,255,0.04)_38%,rgba(0,0,0,0.18))]" />
       <div className="pointer-events-none absolute -left-10 top-0 h-20 w-28 rotate-[-24deg] bg-white/16 blur-xl transition duration-300 group-hover:translate-x-16" />
       <div
@@ -116,6 +141,42 @@ function Stat({
       </p>
     </div>
   );
+}
+
+function getMomentum(totalGreen: number, totalRed: number, todayGreen: number, todayRed: number) {
+  const score = todayGreen - todayRed;
+  const lifetimeScore = totalGreen - totalRed;
+  const width = Math.min(100, Math.max(16, 50 + score * 12));
+
+  if (score > 0) {
+    return {
+      label: "Momentum up",
+      message: "Green actions are ahead today. Keep stacking the next clean rep.",
+      score,
+      tone: "green" as const,
+      width,
+    };
+  }
+
+  if (score < 0) {
+    return {
+      label: "Recovery signal",
+      message: "Red is visible early. One corrected choice can turn the session.",
+      score,
+      tone: "red" as const,
+      width,
+    };
+  }
+
+  return {
+    label: lifetimeScore >= 0 ? "Base defended" : "Reset point",
+    message: lifetimeScore >= 0
+      ? "No damage today. Pick one small win and move the ratio."
+      : "The board is neutral right now. Start with the easiest green action.",
+    score,
+    tone: "neutral" as const,
+    width,
+  };
 }
 
 function useCountUp(target: number, ready: boolean) {

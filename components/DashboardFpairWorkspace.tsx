@@ -6,10 +6,12 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  Flame,
   HeartPulse,
   Pencil,
   Plus,
   Target,
+  Trophy,
   X,
 } from "lucide-react";
 import {
@@ -365,8 +367,8 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
 
   return shell(
     <>
-      <section className="grid gap-4 xl:grid-cols-3">
-        <div className="surface-dark flex min-h-[260px] flex-col p-6 sm:p-8">
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_1fr_1fr_1.1fr]">
+        <div className="surface-dark fp-reveal flex min-h-[260px] flex-col p-6 sm:p-8">
           <div className="flex items-start justify-between gap-6">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.22em] text-white/[0.78]">Profile</p>
@@ -377,7 +379,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
           <div className="mt-auto border border-white/[0.14] p-3">
             <div className="h-3 overflow-hidden rounded-full bg-white/[0.18]">
               <div
-                className="h-full rounded-full bg-[#d9aa62] shadow-[0_0_18px_rgba(217,170,98,0.72)] transition-[width]"
+                className="fp-progress-shine h-full rounded-full bg-[#d9aa62] shadow-[0_0_18px_rgba(217,170,98,0.72)] transition-[width]"
                 style={{ width: `${Math.max(progress.score > 0 ? 4 : 0, progress.progress)}%` }}
               />
             </div>
@@ -388,7 +390,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
           </div>
         </div>
 
-        <div className="surface flex min-h-[260px] flex-col p-6 sm:p-8">
+        <div className="surface fp-reveal fp-reveal-delay-1 flex min-h-[260px] flex-col p-6 sm:p-8">
           <p className="eyebrow">Today</p>
           <div className="mt-auto grid grid-cols-2 gap-3">
             <SmallStat label="Green" value={breakdown.green} tone="green" />
@@ -399,6 +401,7 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
         </div>
 
         <SelfCareOverviewPanel snapshot={snapshot} today={today} />
+        <MomentumCoachPanel breakdown={breakdown} progress={progress} stats={allTimeStats} />
       </section>
 
       <section className="grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
@@ -442,6 +445,88 @@ export default function DashboardFpairWorkspace({ initialDate, mode = "overview"
   );
 }
 
+function MomentumCoachPanel({
+  breakdown,
+  progress,
+  stats,
+}: {
+  breakdown: ReturnType<typeof getDayBreakdown>;
+  progress: ReturnType<typeof getLevelProgress>;
+  stats: ReturnType<typeof getStats>;
+}) {
+  const ratio = getGreenRedRatio(breakdown.green, breakdown.red);
+  const scoreTone = breakdown.score > 0 ? "green" : breakdown.score < 0 ? "red" : "neutral";
+  const nextLevelGap = Math.max(0, progress.nextLevelScore - progress.score);
+  const Icon = scoreTone === "green" ? Trophy : scoreTone === "red" ? Target : Flame;
+  const message =
+    scoreTone === "green"
+      ? "Wins are leading. Protect the edge with one more clean action."
+      : scoreTone === "red"
+        ? "The miss is visible. Reset, remove one trigger, and take the next rep."
+        : "Board is neutral. Choose the smallest green action and start momentum.";
+
+  return (
+    <div
+      className={cn(
+        "surface fp-reveal fp-reveal-delay-2 relative min-h-[260px] overflow-hidden p-6 sm:p-8",
+        scoreTone === "green" && "border-emerald-500/30",
+        scoreTone === "red" && "border-red-500/30",
+      )}
+    >
+      <div
+        className={cn(
+          "absolute inset-x-0 top-0 h-1",
+          scoreTone === "green" && "bg-emerald-500",
+          scoreTone === "red" && "bg-red-500",
+          scoreTone === "neutral" && "bg-[#d9aa62]",
+        )}
+        aria-hidden="true"
+      />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">Boost</p>
+          <h2 className="mt-2 text-2xl font-semibold">Next rep</h2>
+        </div>
+        <span
+          className={cn(
+            "fp-live-ring inline-flex h-11 w-11 items-center justify-center border bg-site",
+            scoreTone === "green" && "border-emerald-500/35 text-emerald-700",
+            scoreTone === "red" && "border-red-500/35 text-red-700",
+            scoreTone === "neutral" && "border-[#d9aa62]/45 text-[#8a6427]",
+          )}
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+      </div>
+      <p className="mt-5 text-sm leading-6 text-site-muted">{message}</p>
+      <div className="mt-5 grid gap-2">
+        <BoostLine label="Today ratio" value={formatRoundedNumber(ratio)} tone={ratio < 1 ? "red" : "green"} />
+        <BoostLine label="Clean streak" value={stats.cleanDays} tone={stats.cleanDays > 0 ? "green" : "red"} />
+        <BoostLine label="To next level" value={nextLevelGap} tone={nextLevelGap <= 3 ? "green" : undefined} />
+      </div>
+    </div>
+  );
+}
+
+function BoostLine({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone?: "green" | "red";
+  value: number | string;
+}) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-center gap-3 border border-site bg-site p-2.5 text-sm">
+      <span className="text-site-muted">{label}</span>
+      <span className={cn("font-semibold", tone === "green" && "text-emerald-700", tone === "red" && "text-red-700")}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function JournalTasksPanel({
   onSaveStatus,
   selectedDate,
@@ -471,9 +556,9 @@ function JournalTasksPanel({
             <div
               key={task.id}
               className={cn(
-                "grid grid-cols-[auto_1fr_auto] items-center gap-3 border bg-site p-3 text-sm",
-                task.completed === true && "border-emerald-500/45",
-                task.completed === false && "border-red-500/45",
+                "fp-hover-lift grid grid-cols-[auto_1fr_auto] items-center gap-3 border bg-site p-3 text-sm",
+                task.completed === true && "fp-status-positive-active border-emerald-500/45",
+                task.completed === false && "fp-status-negative-active border-red-500/45",
                 task.completed === null && "border-site",
               )}
             >
@@ -663,8 +748,8 @@ function StatsWorkspace({
           eyebrow="Curve"
           series={[
             { color: "#3A6EA5", formatValue: formatDurationSeconds, key: "activeSeconds", label: "Active time" },
-            { color: "#a4772b", formatValue: formatRoundedNumber, key: "interactions", label: "Interactions" },
-            { color: "#b91c1c", formatValue: formatRoundedNumber, key: "switches", label: "Switches" },
+            { color: "#047857", formatValue: formatDurationSeconds, key: "focusSeconds", label: "Focus time" },
+            { color: "#b91c1c", formatValue: formatRoundedNumber, key: "blocked", label: "Blocks" },
           ]}
           points={screenTimeStats.trend}
         />
@@ -1069,38 +1154,41 @@ function buildSelfCareTrend(snapshot: FpairSnapshot, buckets: Array<{ from: stri
 function buildScreenTimeStats(snapshot: FpairSnapshot, buckets: Array<{ from: string; label: string; to: string }>, from: string, to: string) {
   const periodRows = snapshot.screenTime.filter((row) => row.date >= from && row.date <= to);
   const totalSeconds = periodRows.reduce((sum, row) => sum + row.activeSeconds, 0);
-  const clickCount = periodRows.reduce((sum, row) => sum + row.clickCount, 0);
-  const interactionCount = periodRows.reduce((sum, row) => sum + row.interactionCount, 0);
-  const tabSwitches = periodRows.reduce((sum, row) => sum + row.tabSwitches, 0);
-  const domains = new Map<string, { activeSeconds: number; clickCount: number; domain: string; interactionCount: number; tabSwitches: number }>();
+  const focusSeconds = periodRows.reduce((sum, row) => sum + row.focusSeconds, 0);
+  const blockedCount = periodRows.reduce((sum, row) => sum + row.blockedCount, 0);
+  const focusAvoidCount = periodRows.reduce((sum, row) => sum + row.focusAvoidCount, 0);
+  const focusParkedCount = periodRows.reduce((sum, row) => sum + row.focusParkedCount, 0);
+  const tabCount = periodRows.reduce((sum, row) => sum + row.tabCount, 0);
+  const domains = new Map<string, { activeSeconds: number; blockedCount: number; domain: string; focusAvoidCount: number; focusParkedCount: number; focusSeconds: number; tabCount: number }>();
 
   periodRows.forEach((row) => {
-    const current = domains.get(row.domain) ?? { activeSeconds: 0, clickCount: 0, domain: row.domain, interactionCount: 0, tabSwitches: 0 };
+    const current = domains.get(row.domain) ?? { activeSeconds: 0, blockedCount: 0, domain: row.domain, focusAvoidCount: 0, focusParkedCount: 0, focusSeconds: 0, tabCount: 0 };
     current.activeSeconds += row.activeSeconds;
-    current.clickCount += row.clickCount;
-    current.interactionCount += row.interactionCount;
-    current.tabSwitches += row.tabSwitches;
+    current.blockedCount += row.blockedCount;
+    current.focusAvoidCount += row.focusAvoidCount;
+    current.focusParkedCount += row.focusParkedCount;
+    current.focusSeconds += row.focusSeconds;
+    current.tabCount += row.tabCount;
     domains.set(row.domain, current);
   });
 
-  const hours = totalSeconds / 3600;
   return {
-    clickCount,
+    blockedCount,
     domainCount: domains.size,
-    interactionCount,
-    interactionsPerHour: hours ? interactionCount / hours : 0,
-    switchPerHour: hours ? tabSwitches / hours : 0,
-    tabSwitches,
+    focusAvoidCount,
+    focusParkedCount,
+    focusSeconds,
+    focusShare: totalSeconds ? focusSeconds / totalSeconds : 0,
+    tabCount,
     topDomains: Array.from(domains.values()).sort((left, right) => right.activeSeconds - left.activeSeconds).slice(0, 5),
     totalSeconds,
     trend: buckets.map((bucket) => {
       const rows = snapshot.screenTime.filter((row) => row.date >= bucket.from && row.date <= bucket.to);
       return {
         activeSeconds: rows.reduce((sum, row) => sum + row.activeSeconds, 0),
-        clicks: rows.reduce((sum, row) => sum + row.clickCount, 0),
-        interactions: rows.reduce((sum, row) => sum + row.interactionCount, 0),
+        blocked: rows.reduce((sum, row) => sum + row.blockedCount, 0),
+        focusSeconds: rows.reduce((sum, row) => sum + row.focusSeconds, 0),
         label: bucket.label,
-        switches: rows.reduce((sum, row) => sum + row.tabSwitches, 0),
       };
     }),
   };
@@ -1574,10 +1662,11 @@ function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot;
   const allRows = snapshot.screenTime;
   const totalTodaySeconds = todayRows.reduce((sum, row) => sum + row.activeSeconds, 0);
   const totalAllSeconds = allRows.reduce((sum, row) => sum + row.activeSeconds, 0);
-  const totalTodayClicks = todayRows.reduce((sum, row) => sum + row.clickCount, 0);
-  const totalTodayInteractions = todayRows.reduce((sum, row) => sum + row.interactionCount, 0);
-  const totalTodaySwitches = todayRows.reduce((sum, row) => sum + row.tabSwitches, 0);
-  const todayHours = totalTodaySeconds / 3600;
+  const totalTodayFocusSeconds = todayRows.reduce((sum, row) => sum + row.focusSeconds, 0);
+  const totalTodayBlocked = todayRows.reduce((sum, row) => sum + row.blockedCount, 0);
+  const totalTodayAvoided = todayRows.reduce((sum, row) => sum + row.focusAvoidCount, 0);
+  const totalTodayParked = todayRows.reduce((sum, row) => sum + row.focusParkedCount, 0);
+  const totalTodayTabs = todayRows.reduce((sum, row) => sum + row.tabCount, 0);
   const avgSecondsPerDomain = todayRows.length ? totalTodaySeconds / todayRows.length : 0;
   const topDomains = todayRows
     .slice()
@@ -1590,21 +1679,21 @@ function ScreenTimeOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot;
       <h2 className="mt-2 text-2xl font-semibold">Active tabs</h2>
       <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
         <Metric label="Today" value={formatDurationSeconds(totalTodaySeconds)} />
+        <Metric label="Focus today" value={formatDurationSeconds(totalTodayFocusSeconds)} />
         <Metric label="All time" value={formatDurationSeconds(totalAllSeconds)} />
         <Metric label="Domains today" value={topDomains.length} />
-        <Metric label="Tab switches" value={totalTodaySwitches} />
-        <Metric label="Clicks" value={totalTodayClicks} />
-        <Metric label="Interactions" value={totalTodayInteractions} />
+        <Metric label="Tabs today" value={totalTodayTabs} />
+        <Metric label="Blocked" value={totalTodayBlocked} />
+        <Metric label="Focus avoided" value={totalTodayAvoided} />
+        <Metric label="Tabs parked" value={totalTodayParked} />
         <Metric label="Avg/domain" value={formatDurationSeconds(avgSecondsPerDomain)} />
-        <Metric label="Clicks/hour" value={todayHours ? formatRoundedNumber(totalTodayClicks / todayHours) : 0} />
-        <Metric label="Switch/hour" value={todayHours ? formatRoundedNumber(totalTodaySwitches / todayHours) : 0} />
       </div>
       <div className="mt-5 grid gap-2">
         {topDomains.length ? topDomains.map((row) => (
           <div key={`${row.date}-${row.domain}`} className="grid gap-3 border-b border-site py-2 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="min-w-0">
               <p className="truncate font-semibold">{row.domain}</p>
-              <p className="text-xs text-site-muted">{row.interactionCount} interactions / {row.clickCount} clicks / {row.tabSwitches} switches</p>
+              <p className="text-xs text-site-muted">{formatDurationSeconds(row.focusSeconds)} focus / {row.tabCount} tabs / {row.blockedCount} blocks</p>
             </div>
             <span className="text-site-muted">{formatDurationSeconds(row.activeSeconds)}</span>
           </div>
@@ -1622,22 +1711,25 @@ function ScreenTimeStatsPanel({ periodUnit, stats }: { periodUnit: string; stats
           <p className="eyebrow">Chrome behavior</p>
           <h2 className="mt-2 text-2xl font-semibold">Screen activity</h2>
         </div>
-        <p className="text-sm text-site-muted">Only recent interactive activity is counted.</p>
+        <p className="text-sm text-site-muted">Active Chrome tabs and focus sessions synced from the extension.</p>
       </div>
       <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
         <Metric label="Active time" value={formatDurationSeconds(stats.totalSeconds)} />
+        <Metric label="Focus time" value={formatDurationSeconds(stats.focusSeconds)} />
         <Metric label={`Avg/${periodUnit}`} value={formatDurationSeconds(stats.totalSeconds / Math.max(1, stats.trend.length))} />
         <Metric label="Domains" value={stats.domainCount} />
-        <Metric label="Interactions" value={stats.interactionCount} />
-        <Metric label="Interactions/hour" value={formatRoundedNumber(stats.interactionsPerHour)} />
-        <Metric label="Switches/hour" value={formatRoundedNumber(stats.switchPerHour)} />
+        <Metric label="Tabs" value={stats.tabCount} />
+        <Metric label="Focus share" value={`${Math.round(stats.focusShare * 100)}%`} />
+        <Metric label="Blocked" value={stats.blockedCount} />
+        <Metric label="Avoided" value={stats.focusAvoidCount} />
+        <Metric label="Parked" value={stats.focusParkedCount} />
       </div>
       <div className="mt-6 grid gap-2">
         {stats.topDomains.length ? stats.topDomains.map((row) => (
           <div key={row.domain} className="grid gap-3 border-b border-site py-2 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="min-w-0">
               <p className="truncate font-semibold">{row.domain}</p>
-              <p className="text-xs text-site-muted">{row.interactionCount} interactions / {row.clickCount} clicks / {row.tabSwitches} switches</p>
+              <p className="text-xs text-site-muted">{formatDurationSeconds(row.focusSeconds)} focus / {row.tabCount} tabs / {row.blockedCount} blocks</p>
             </div>
             <span className="text-site-muted">{formatDurationSeconds(row.activeSeconds)}</span>
           </div>
@@ -1858,7 +1950,14 @@ function QuestResultRow({
   const savedValue = hasNumericInput && draftValue ? Number(draftValue) : null;
 
   return (
-    <div className="mt-3 grid gap-2 border border-site bg-site p-2.5 lg:grid-cols-[minmax(0,1fr)_110px_auto] lg:items-center">
+    <div
+      className={cn(
+        "fp-hover-lift mt-3 grid gap-2 border bg-site p-2.5 lg:grid-cols-[minmax(0,1fr)_110px_auto] lg:items-center",
+        status === "completed" && "fp-status-positive-active border-emerald-500/45",
+        status === "failed" && "fp-status-negative-active border-red-500/45",
+        status === "open" && "border-site",
+      )}
+    >
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{quest.title}</p>
         <p className="text-xs capitalize text-site-muted">
@@ -2354,7 +2453,7 @@ function SelfCareOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot; t
   const breakdown = getDayBreakdown(snapshot, today);
 
   return (
-    <div className="surface p-6 sm:p-8">
+    <div className="surface fp-reveal fp-reveal-delay-2 p-6 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Self-care</p>
@@ -2375,7 +2474,14 @@ function SelfCareOverviewPanel({ snapshot, today }: { snapshot: FpairSnapshot; t
 
 function SelfCareLine({ label, status, value }: { label: string; status: "green" | "red" | null; value: string }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] gap-3 border border-site bg-site p-2">
+    <div
+      className={cn(
+        "grid grid-cols-[1fr_auto_auto] gap-3 border bg-site p-2",
+        status === "green" && "fp-status-positive-active border-emerald-500/35",
+        status === "red" && "fp-status-negative-active border-red-500/35",
+        status === null && "border-site",
+      )}
+    >
       <span className="text-site-muted">{label}</span>
       <span className="font-semibold">{value}</span>
       <span className={cn("font-semibold", status === "green" && "text-emerald-700", status === "red" && "text-red-700")}>
@@ -2403,7 +2509,7 @@ function PlannedList({ items, title }: { items: Array<{ date: string; detail: st
 
 function SmallStat({ label, tone, value }: { label: string; tone?: "green" | "red"; value: number | string }) {
   return (
-    <div className="fp-panel p-4">
+    <div className="fp-hover-lift fp-panel p-4">
       <p className={cn("text-2xl font-semibold", tone === "green" && "text-emerald-700", tone === "red" && "text-red-700")}>{value}</p>
       <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-site-muted">{label}</p>
     </div>
@@ -2496,8 +2602,8 @@ function StatusIcon({
       onClick={onClick}
       className={cn(
         "inline-flex h-10 min-w-10 items-center justify-center border px-2 text-sm font-semibold transition",
-        active && tone === "green" && "border-emerald-600 bg-emerald-50 text-emerald-800",
-        active && tone === "red" && "border-red-600 bg-red-50 text-red-800",
+        active && tone === "green" && "fp-status-positive-active border-emerald-600 bg-emerald-50 text-emerald-800",
+        active && tone === "red" && "fp-status-negative-active border-red-600 bg-red-50 text-red-800",
         active && tone === "neutral" && "border-ink bg-ink text-white",
         !active && "border-site bg-card text-site-muted hover:text-site",
       )}

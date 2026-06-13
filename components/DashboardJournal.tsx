@@ -70,6 +70,7 @@ export default function DashboardJournal({
       .sort(([left], [right]) => right.localeCompare(left)),
     [entries],
   );
+  const dayPulse = useMemo(() => countDay(entry, selectedDate), [entry, selectedDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -245,6 +246,10 @@ export default function DashboardJournal({
           </span>
         </h2>
       </section>
+      ) : null}
+
+      {activeTab === "write" ? (
+        <JournalPulseStrip counts={dayPulse} isFuture={isFuture} />
       ) : null}
 
       {activeTab === "write" ? (
@@ -598,9 +603,9 @@ function ActivityItem({
   return (
     <div
       className={cn(
-        "grid gap-2 border bg-card p-2.5",
-        activity.status === "positive" && "border-emerald-500/45",
-        activity.status === "negative" && "border-red-500/45",
+        "fp-hover-lift grid gap-2 border bg-card p-2.5",
+        activity.status === "positive" && "fp-status-positive-active border-emerald-500/45",
+        activity.status === "negative" && "fp-status-negative-active border-red-500/45",
       )}
     >
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_36px] items-center gap-1.5 sm:gap-2">
@@ -650,9 +655,9 @@ function PlannedCompletionItem({
   return (
     <div
       className={cn(
-        "grid gap-2 border bg-card p-2.5",
-        task.completed === true && "border-emerald-500/45",
-        task.completed === false && "border-red-500/45",
+        "fp-hover-lift grid gap-2 border bg-card p-2.5",
+        task.completed === true && "fp-status-positive-active border-emerald-500/45",
+        task.completed === false && "fp-status-negative-active border-red-500/45",
         task.completed === null && "border-site",
       )}
     >
@@ -718,7 +723,9 @@ function StatusIconButton({
       onClick={onClick}
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center border transition",
-        active ? activeClasses[tone] : "border-site text-site-muted hover:text-site",
+        active
+          ? cn(activeClasses[tone], tone === "positive" ? "fp-status-positive-active" : "fp-status-negative-active")
+          : "border-site text-site-muted hover:text-site",
       )}
       aria-label={ariaLabel}
       aria-pressed={active}
@@ -745,6 +752,86 @@ function EmptyState({ text }: { text: string }) {
   return (
     <div className="border border-dashed border-site bg-site p-4 text-sm text-site-muted">
       {text}
+    </div>
+  );
+}
+
+function JournalPulseStrip({
+  counts,
+  isFuture,
+}: {
+  counts: { negative: number; positive: number };
+  isFuture: boolean;
+}) {
+  const score = counts.positive - counts.negative;
+  const total = counts.positive + counts.negative;
+  const positiveWidth = total ? Math.round((counts.positive / total) * 100) : 50;
+  const tone = score > 0 ? "positive" : score < 0 ? "negative" : "neutral";
+  const message = isFuture
+    ? "Plan the green actions now. The score opens on that day."
+    : tone === "positive"
+      ? "Green is ahead. Protect the day with one more clean decision."
+      : tone === "negative"
+        ? "Red is visible. Reset the environment and take one corrective action."
+        : "Neutral board. One small completed task will tilt the day.";
+
+  return (
+    <section
+      className={cn(
+        "fp-reveal grid gap-3 border bg-card p-4 sm:grid-cols-[1fr_auto] sm:items-center",
+        tone === "positive" && "border-emerald-500/35",
+        tone === "negative" && "border-red-500/35",
+        tone === "neutral" && "border-site",
+      )}
+    >
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-site-muted">
+          Daily pulse
+        </p>
+        <p className="mt-2 text-sm leading-6 text-site-muted">{message}</p>
+        <div className="mt-3 grid h-2 overflow-hidden bg-site sm:max-w-md">
+          <div className="flex h-full">
+            <span
+              className="fp-progress-shine bg-emerald-500 transition-[width] duration-500"
+              style={{ width: `${positiveWidth}%` }}
+            />
+            <span
+              className="bg-red-500 transition-[width] duration-500"
+              style={{ width: `${100 - positiveWidth}%` }}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <PulseMetric label="Green" tone="positive" value={counts.positive} />
+        <PulseMetric label="Red" tone="negative" value={counts.negative} />
+        <PulseMetric label="Score" tone={tone} value={score > 0 ? `+${score}` : score} />
+      </div>
+    </section>
+  );
+}
+
+function PulseMetric({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone: "negative" | "neutral" | "positive";
+  value: number | string;
+}) {
+  return (
+    <div className="border border-site bg-site px-3 py-2">
+      <p className={cn(
+        "text-lg font-semibold",
+        tone === "positive" && "text-emerald-700",
+        tone === "negative" && "text-red-700",
+      )}>
+        {value}
+      </p>
+      <p className="mt-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-site-muted">
+        {label}
+      </p>
     </div>
   );
 }

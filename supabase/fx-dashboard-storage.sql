@@ -35,22 +35,39 @@ create table if not exists public.fpair_screen_time_daily (
   activity_date date not null,
   domain text not null,
   active_seconds integer not null default 0,
-  click_count integer not null default 0,
-  interaction_count integer not null default 0,
-  tab_switch_count integer not null default 0,
+  focus_seconds integer not null default 0,
+  tab_count integer not null default 0,
+  blocked_count integer not null default 0,
+  focus_avoid_count integer not null default 0,
+  focus_parked_count integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, activity_date, domain)
 );
 
 alter table public.fpair_screen_time_daily
-  add column if not exists click_count integer not null default 0;
+  add column if not exists focus_seconds integer not null default 0;
 
 alter table public.fpair_screen_time_daily
-  add column if not exists interaction_count integer not null default 0;
+  add column if not exists tab_count integer not null default 0;
 
 alter table public.fpair_screen_time_daily
-  add column if not exists tab_switch_count integer not null default 0;
+  add column if not exists blocked_count integer not null default 0;
+
+alter table public.fpair_screen_time_daily
+  add column if not exists focus_avoid_count integer not null default 0;
+
+alter table public.fpair_screen_time_daily
+  add column if not exists focus_parked_count integer not null default 0;
+
+alter table public.fpair_screen_time_daily
+  drop column if exists click_count;
+
+alter table public.fpair_screen_time_daily
+  drop column if exists interaction_count;
+
+alter table public.fpair_screen_time_daily
+  drop column if exists tab_switch_count;
 
 create index if not exists fpair_screen_time_daily_user_date_idx
   on public.fpair_screen_time_daily (user_id, activity_date desc, active_seconds desc);

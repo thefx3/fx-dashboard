@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle2, Flame, RotateCcw, Target } from "lucide-react";
 import PublicHeader from "@/components/PublicHeader";
 import PublicHeroStats from "@/components/PublicHeroStats";
 import { getTodayIsoDate } from "@/lib/date";
@@ -56,6 +56,103 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <section id="progress" className="bg-site py-16 text-site sm:py-20">
+        <div className="fp-container grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+          <div className="fp-reveal">
+            <p className="eyebrow">Progress loop</p>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight sm:text-5xl">
+              Make wins obvious. Turn misses into the next move.
+            </h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <ProgressCard
+              icon={CheckCircle2}
+              title="Wins"
+              text="Every green point gets visual weight so the day feels earned."
+              tone="green"
+            />
+            <ProgressCard
+              icon={RotateCcw}
+              title="Misses"
+              text="Red points stay visible as feedback, not noise."
+              tone="red"
+            />
+            <ProgressCard
+              icon={Flame}
+              title="Streak"
+              text="Momentum is highlighted before it becomes easy to ignore."
+              tone="amber"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section id="playbooks" className="bg-[#121212] py-16 text-white sm:py-20">
+        <div className="fp-container grid gap-8 lg:grid-cols-[1fr_0.85fr] lg:items-center">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {["Review red point", "Lock green action", "Write lesson", "Repeat tomorrow"].map((item, index) => (
+              <div
+                key={item}
+                className="fp-hover-lift fp-reveal border border-white/12 bg-white/[0.06] p-5"
+                style={{ animationDelay: `${index * 80}ms` }}
+              >
+                <span className="inline-flex h-10 w-10 items-center justify-center border border-white/14 text-[#d9aa62]">
+                  <Target className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <p className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-white/58">
+                  Step {index + 1}
+                </p>
+                <h3 className="mt-2 text-xl font-semibold">{item}</h3>
+              </div>
+            ))}
+          </div>
+          <div className="fp-reveal fp-reveal-delay-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#d9aa62]">
+              Playbooks
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold leading-tight sm:text-5xl">
+              The dashboard should push the next clean action.
+            </h2>
+            <p className="mt-5 max-w-xl text-sm leading-7 text-white/64">
+              The public page now mirrors the same discipline loop: celebrate
+              what worked, expose what failed, then point back to the next rep.
+            </p>
+            <Link href="/dashboard" className="hero-link mt-8">
+              OPEN DASHBOARD
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </section>
     </main>
+  );
+}
+
+function ProgressCard({
+  icon: Icon,
+  text,
+  title,
+  tone,
+}: {
+  icon: typeof CheckCircle2;
+  text: string;
+  title: string;
+  tone: "amber" | "green" | "red";
+}) {
+  const toneClasses = {
+    amber: "border-[#d9aa62]/45 text-[#8a6427]",
+    green: "border-emerald-500/35 text-emerald-700",
+    red: "border-red-500/35 text-red-700",
+  };
+
+  return (
+    <article className="fp-hover-lift fp-reveal surface p-5">
+      <span className={`inline-flex h-11 w-11 items-center justify-center border bg-site ${toneClasses[tone]}`}>
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <h3 className="mt-6 text-xl font-semibold">{title}</h3>
+      <p className="mt-3 text-sm leading-6 text-site-muted">{text}</p>
+    </article>
   );
 }
