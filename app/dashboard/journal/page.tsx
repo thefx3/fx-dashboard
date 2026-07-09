@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import DashboardShell from "@/components/DashboardShell";
+import DashboardShell from "@/components/DashboardShellNext";
 import { getViewerServer } from "@/lib/auth/viewer.server";
-import { getDashboardMetrics } from "@/lib/dashboard-metrics";
 import { getTodayIsoDate } from "@/lib/date";
 
 export default async function DashboardJournalPage({
@@ -13,14 +12,11 @@ export default async function DashboardJournalPage({
   if (!user && !unavailable) redirect("/dashboard/login");
 
   const { date } = await searchParams;
-  const { metrics, isLive } = await getDashboardMetrics();
   const journalDate = isIsoDate(date) ? date : getTodayIsoDate();
 
   return (
     <DashboardShell
       email={user?.email ?? "Supabase unavailable"}
-      metrics={metrics}
-      isLive={isLive}
       view="journal"
       journalDate={journalDate}
     />

@@ -228,6 +228,114 @@ create table if not exists public.fpair_list_items (
   primary key (user_id, id)
 );
 
+-- Life OS schema. These tables are the new primary model for fpair_.
+-- Legacy quest/list/journal tables can be retired after all clients stop syncing them.
+
+create table if not exists public.life_activity_templates (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  id text not null,
+  title text not null,
+  category text not null,
+  icon text not null default 'ellipse-outline',
+  color text not null default '#6EF6A4',
+  notes text not null default '',
+  versions jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
+create table if not exists public.life_schedule_blocks (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  id text not null,
+  template_id text,
+  title text not null,
+  category text not null,
+  icon text not null default 'ellipse-outline',
+  color text not null default '#6EF6A4',
+  block_date date not null,
+  start_time time not null,
+  end_time time not null,
+  repeat text not null default 'never',
+  repeat_days jsonb not null default '[]'::jsonb,
+  repeat_until date,
+  skip_dates jsonb not null default '[]'::jsonb,
+  reminder_minutes integer,
+  selected_version text not null default 'normal',
+  status text not null default 'upcoming',
+  notes text not null default '',
+  started_at timestamptz,
+  paused_at timestamptz,
+  finished_at timestamptz,
+  review jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
+create table if not exists public.life_system_health_days (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  entry_date date not null,
+  focus_minutes integer not null default 0,
+  lost_minutes integer not null default 0,
+  completion_rate numeric not null default 0,
+  recovery_speed_hours numeric not null default 0,
+  streak integer not null default 0,
+  sleep_hours numeric,
+  energy_score numeric,
+  emotional_stability numeric,
+  process_score numeric not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, entry_date)
+);
+
+alter table public.life_schedule_blocks
+  add column if not exists repeat_until date;
+
+alter table public.life_schedule_blocks
+  add column if not exists skip_dates jsonb not null default '[]'::jsonb;
+
+alter table public.life_activity_templates
+  drop constraint if exists life_activity_templates_category_check;
+
+alter table public.life_activity_templates
+  add constraint life_activity_templates_category_check
+  check (category in ('sport', 'work', 'piano', 'guitare', 'language', 'health', 'meditation', 'learning', 'trading', 'social', 'rest', 'private'));
+
+alter table public.life_schedule_blocks
+  drop constraint if exists life_schedule_blocks_category_check;
+
+alter table public.life_schedule_blocks
+  add constraint life_schedule_blocks_category_check
+  check (category in ('sport', 'work', 'piano', 'guitare', 'language', 'health', 'meditation', 'learning', 'trading', 'social', 'rest', 'private'));
+
+alter table public.life_schedule_blocks
+  drop constraint if exists life_schedule_blocks_repeat_check;
+
+alter table public.life_schedule_blocks
+  add constraint life_schedule_blocks_repeat_check
+  check (repeat in ('never', 'daily', 'weekly', 'monthly', 'workday', 'custom'));
+
+alter table public.life_schedule_blocks
+  drop constraint if exists life_schedule_blocks_status_check;
+
+alter table public.life_schedule_blocks
+  add constraint life_schedule_blocks_status_check
+  check (status in ('upcoming', 'active', 'paused', 'completed', 'missed', 'adapted'));
+
+alter table public.life_schedule_blocks
+  drop constraint if exists life_schedule_blocks_version_check;
+
+alter table public.life_schedule_blocks
+  add constraint life_schedule_blocks_version_check
+  check (selected_version in ('full', 'normal', 'light', 'micro'));
+
+create index if not exists life_schedule_blocks_user_date_idx
+  on public.life_schedule_blocks(user_id, block_date, start_time);
+
+create index if not exists life_system_health_days_user_date_idx
+  on public.life_system_health_days(user_id, entry_date desc);
+
 alter table public.fpair_list_items
   add column if not exists created_at timestamptz not null default now();
 
@@ -298,6 +406,9 @@ alter table public.fpair_quests enable row level security;
 alter table public.fpair_quest_results enable row level security;
 alter table public.fpair_health_days enable row level security;
 alter table public.fpair_list_items enable row level security;
+alter table public.life_activity_templates enable row level security;
+alter table public.life_schedule_blocks enable row level security;
+alter table public.life_system_health_days enable row level security;
 
 drop policy if exists "Users manage their trading profile" on public.trading_profiles;
 drop policy if exists "Users manage their notification settings" on public.trading_notification_settings;
@@ -314,6 +425,9 @@ drop policy if exists "Users manage their fpair quests" on public.fpair_quests;
 drop policy if exists "Users manage their fpair quest results" on public.fpair_quest_results;
 drop policy if exists "Users manage their fpair health days" on public.fpair_health_days;
 drop policy if exists "Users manage their fpair list items" on public.fpair_list_items;
+drop policy if exists "Users manage their life activity templates" on public.life_activity_templates;
+drop policy if exists "Users manage their life schedule blocks" on public.life_schedule_blocks;
+drop policy if exists "Users manage their life system health days" on public.life_system_health_days;
 
 create policy "Users manage their trading profile" on public.trading_profiles
   for all to authenticated
@@ -384,6 +498,21 @@ create policy "Users manage their fpair health days" on public.fpair_health_days
   with check (auth.uid() = user_id);
 
 create policy "Users manage their fpair list items" on public.fpair_list_items
+  for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users manage their life activity templates" on public.life_activity_templates
+  for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users manage their life schedule blocks" on public.life_schedule_blocks
+  for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users manage their life system health days" on public.life_system_health_days
   for all to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

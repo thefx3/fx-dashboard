@@ -47,7 +47,7 @@ export async function updateSession(request: NextRequest) {
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
   try {
-    await supabase.auth.getClaims()
+    await withTimeout(supabase.auth.getClaims(), 2500)
   } catch (error) {
     console.error("Supabase claims refresh failed", error)
     return supabaseResponse
@@ -67,4 +67,13 @@ export async function updateSession(request: NextRequest) {
   // of sync and terminate the user's session prematurely!
 
   return supabaseResponse
+}
+
+function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number) {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Supabase claims timed out")), timeoutMs)
+    }),
+  ])
 }
