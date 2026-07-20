@@ -773,6 +773,53 @@ h6 {
   grid-template-rows: auto minmax(0, 1fr) auto auto;
 }
 
+.fx-focus-primary-panel {
+  grid-template-rows: 2.45rem minmax(0, 1fr) 4.05rem 4.55rem;
+  padding-bottom: clamp(2rem, 3vw, 3.15rem);
+}
+
+.fx-focus-primary-panel-expanded {
+  grid-template-rows: 2.45rem minmax(0, 1fr) 0 0;
+}
+
+.fx-focus-panel-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 2.45rem;
+}
+
+.fx-focus-panel-controls {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 5.4rem;
+}
+
+.fx-focus-ring-slot {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+}
+
+.fx-focus-ring-slot > .fx-planning-timeline {
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.fx-focus-actions-slot {
+  align-items: end;
+  display: grid;
+  min-height: 0;
+}
+
+.fx-focus-footer-slot {
+  align-items: center;
+  display: grid;
+  min-height: 0;
+}
+
 .fx-panel-eyebrow {
   color: var(--fx-accent);
   font-size: 1rem;
@@ -854,7 +901,7 @@ h6 {
   display: grid;
   gap: 0.8rem;
   grid-template-columns: 1fr 1fr;
-  margin-top: 1.2rem;
+  margin-top: 0;
   padding-top: 1.15rem;
 }
 
@@ -1063,11 +1110,11 @@ h6 {
   border-radius: 8px;
   color: var(--fx-accent);
   display: inline-flex;
-  gap: 0.8rem;
-  height: 4.4rem;
+  gap: 0.6rem;
+  height: 3.55rem;
   justify-content: center;
-  min-width: 4.4rem;
-  padding: 0 1.15rem;
+  min-width: 3.55rem;
+  padding: 0 0.85rem;
   transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
 }
 
@@ -1084,9 +1131,9 @@ h6 {
   border-radius: 8px;
   color: #ff8f98;
   display: inline-flex;
-  height: 4.4rem;
+  height: 3.55rem;
   justify-content: center;
-  min-width: 4.4rem;
+  min-width: 3.55rem;
   overflow: hidden;
   position: relative;
 }
@@ -1109,9 +1156,6 @@ h6 {
 }
 
 .fx-mode-switch {
-  position: absolute;
-  right: clamp(1.5rem, 3vw, 2.7rem);
-  top: clamp(1.5rem, 3vw, 2.7rem);
   justify-content: flex-end;
   margin-top: 0;
 }
@@ -1139,6 +1183,9 @@ h6 {
 }
 
 .fx-mode-switch button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
   min-width: 2.35rem;
   padding: 0;
 }
@@ -1165,7 +1212,7 @@ h6 {
 .fx-action-pair {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  margin-top: 0.7rem;
+  margin-top: 0;
   width: 100%;
 }
 
@@ -1306,7 +1353,10 @@ h6 {
 .fx-planning-timeline {
   align-content: start;
   gap: 0;
-  margin-top: 1.4rem;
+  height: 100%;
+  margin-top: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .fx-timeline-block {
@@ -1314,10 +1364,10 @@ h6 {
   border-left: 1px solid var(--fx-border);
   display: grid;
   gap: 1rem;
-  grid-template-columns: 4.6rem minmax(0, 1fr) auto auto;
-  margin-left: 2.2rem;
-  min-height: 5.8rem;
-  padding: 0.85rem 0 0.85rem 1.35rem;
+  grid-template-columns: 3.65rem minmax(0, 1fr) auto auto;
+  margin-left: 0.25rem;
+  min-height: 5.35rem;
+  padding: 0.72rem 0 0.72rem 1rem;
   position: relative;
 }
 
@@ -1353,6 +1403,21 @@ h6 {
 .fx-state-badge.is-missed {
   border-color: rgba(255, 90, 100, 0.24);
   color: #ff8f98;
+}
+
+.fx-miss-button {
+  align-items: center;
+  color: #ff8f98;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  min-width: 2rem;
+}
+
+.fx-miss-button:hover,
+.fx-miss-button:focus-visible {
+  color: white;
+  outline: none;
 }
 
 .fx-doc-board {
@@ -1527,12 +1592,15 @@ h6 {
 }
 
 .fx-modal-calendar {
-  max-width: min(48rem, calc(100vw - 2rem));
+  max-height: min(86vh, 33rem);
+  max-width: min(34rem, calc(100vw - 2rem));
+  overflow: hidden;
+  padding: 1.15rem;
 }
 
 .fx-calendar-picker {
   display: grid;
-  gap: 1.05rem;
+  gap: 0.7rem;
 }
 
 .fx-calendar-header {
@@ -1543,21 +1611,22 @@ h6 {
 
 .fx-calendar-header p {
   color: white;
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 650;
 }
 
 .fx-calendar-weekdays,
 .fx-calendar-grid {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.32rem;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   width: 100%;
 }
 
 .fx-calendar-weekdays span {
   color: var(--fx-muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  font-weight: 650;
   min-width: 0;
   text-align: center;
 }
@@ -1568,9 +1637,10 @@ h6 {
   border-radius: 8px;
   color: rgba(244, 247, 247, 0.78);
   display: grid;
-  font-size: 1rem;
-  place-items: center;
+  font-size: 0.86rem;
+  min-height: 2.55rem;
   min-width: 0;
+  place-items: center;
 }
 
 .fx-calendar-day.is-muted {
@@ -1740,9 +1810,26 @@ h6 {
     grid-template-columns: 1fr;
   }
 
+  .fx-focus-primary-panel {
+    grid-template-rows: auto minmax(18rem, auto) auto auto;
+  }
+
+  .fx-focus-panel-header {
+    gap: 1rem;
+  }
+
+  .fx-focus-ring-slot {
+    min-height: 18rem;
+  }
+
   .fx-day-row,
-  .fx-task-row {
+  .fx-task-row,
+  .fx-timeline-block {
     grid-template-columns: 1fr;
+  }
+
+  .fx-timeline-block {
+    margin-left: 0.6rem;
   }
 
   .fx-doc-board,

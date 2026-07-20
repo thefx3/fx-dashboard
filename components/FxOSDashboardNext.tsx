@@ -66,6 +66,7 @@ import {
   updateWorkspaceTaskLog,
   updateWorkspaceTask,
   type ActivityRepeat,
+  type ActivityTemporalState,
   type ExecutionActivity,
   type FxOSSnapshot,
   type LifeDomain,
@@ -247,7 +248,7 @@ export default function FxOSDashboardNext({ email, initialFocusTab = "planning",
 
   if (focusOnly) {
     return (
-      <main className="fx-focus-only">
+      <main className="fx-focus-only" style={themeStyle(theme)}>
         {snapshot ? (
           <PrimaryPanel eyebrow={planningEyebrow(selectedDate)}>
             <PlanningRing activity={snapshot.currentActivity} compact />
@@ -499,31 +500,28 @@ function FocusView(props: {
 function PlanningView({ pending, planningMode, selectedDate, snapshot, onPlanningAction, onPlanningMode }: Pick<Parameters<typeof FocusView>[0], "pending" | "planningMode" | "selectedDate" | "snapshot" | "onPlanningAction" | "onPlanningMode">) {
   return (
     <ContentGrid variant="focus">
-      <PrimaryPanel eyebrow={planningEyebrow(selectedDate)}>
-        <div className="fx-mode-switch">
-          <button className={cn(planningMode === "ring" && "is-active")} type="button" aria-label="Ring view" onClick={() => onPlanningMode("ring")}><Target className="h-4 w-4" /></button>
-          <button className={cn(planningMode === "day" && "is-active")} type="button" aria-label="Day list view" onClick={() => onPlanningMode("day")}><LayoutList className="h-4 w-4" /></button>
-        </div>
-        {planningMode === "ring" ? (
-          <>
-            <PlanningRing activity={snapshot.currentActivity} />
-            {snapshot.currentActivity ? (
-              <>
-                <button className="fx-primary-action" disabled={pending === `complete:${snapshot.currentActivity.id}`} type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "complete")}>
-                  <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-                  Complete
-                </button>
-                <div className="fx-secondary-actions">
-                  <button type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "miss")}><XCircle className="h-4 w-4" />Not done</button>
-                  <button type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "end-early")}><Square className="h-4 w-4" />End early</button>
-                </div>
-              </>
-            ) : null}
-          </>
-        ) : (
-          <DayPlanningList activities={snapshot.selectedDateActivities} onAction={onPlanningAction} />
+      <FocusPrimaryPanel
+        eyebrow={planningEyebrow(selectedDate)}
+        controls={(
+          <div className="fx-mode-switch">
+            <button className={cn(planningMode === "ring" && "is-active")} type="button" aria-label="Ring view" onClick={() => onPlanningMode("ring")}><Target className="h-4 w-4" /></button>
+            <button className={cn(planningMode === "day" && "is-active")} type="button" aria-label="Day list view" onClick={() => onPlanningMode("day")}><LayoutList className="h-4 w-4" /></button>
+          </div>
         )}
-      </PrimaryPanel>
+        ring={planningMode === "ring" ? <PlanningRing activity={snapshot.currentActivity} /> : <DayPlanningList activities={snapshot.selectedDateActivities} selectedDate={selectedDate} onAction={onPlanningAction} />}
+        actions={planningMode === "ring" && snapshot.currentActivity ? (
+          <button className="fx-primary-action" disabled={pending === `complete:${snapshot.currentActivity.id}`} type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "complete")}>
+            <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+            Complete
+          </button>
+        ) : null}
+        footer={planningMode === "ring" && snapshot.currentActivity ? (
+          <div className="fx-secondary-actions">
+            <button type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "miss")}><XCircle className="h-4 w-4" />Not done</button>
+            <button type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "end-early")}><Square className="h-4 w-4" />End early</button>
+          </div>
+        ) : null}
+      />
       <SecondaryPanel eyebrow="NEXT">
         {snapshot.nextActivity ? <NextActivity activity={snapshot.nextActivity} /> : <EmptyFocus title="Clear" text="No upcoming activity found." />}
       </SecondaryPanel>
@@ -532,64 +530,48 @@ function PlanningView({ pending, planningMode, selectedDate, snapshot, onPlannin
 }
 
 function PlanningRing({ activity, compact = false }: { activity: ExecutionActivity | null; compact?: boolean }) {
+  const now = useNowTick(1000);
   if (!activity) return <EmptyFocus title="Free" text="No active activity right now." />;
   return (
-    <ProgressRing progress={activity.progress}>
+    <ProgressRing progress={getLiveActivityProgress(activity, now)}>
       <div className="text-center">
         <p className={cn("font-semibold text-white", compact ? "text-5xl" : "text-4xl")}>{domainLabel(activity.category)}</p>
         <p className="mt-4 text-lg text-[var(--fx-muted)]">{activity.title}</p>
         <p className="mt-5 font-mono text-xl text-white/75">{activity.startTime} - {activity.endTime}</p>
         <div className="mx-auto mt-7 h-px w-40 bg-white/10" />
-        <p className="mt-6 font-mono text-5xl font-semibold text-[var(--fx-accent)]">{formatRemaining(activity)}</p>
+        <p className="mt-6 font-mono text-5xl font-semibold text-[var(--fx-accent)]">{formatRemaining(activity, now)}</p>
         <p className="mt-2 text-sm text-[var(--fx-muted)]">remaining</p>
       </div>
     </ProgressRing>
   );
 }
 
-function DayPlanningList({ activities, onAction }: { activities: ExecutionActivity[]; onAction: (activity: ExecutionActivity, action: "complete" | "delay" | "end-early" | "miss") => void }) {
+function DayPlanningList({ activities, onAction, selectedDate }: { activities: ExecutionActivity[]; onAction: (activity: ExecutionActivity, action: "complete" | "delay" | "end-early" | "miss") => void; selectedDate: string }) {
   if (!activities.length) return <PanelEmpty title="No activity for this day" />;
-  return <DayPlanningTimeline activities={activities} onAction={onAction} />;
-  return (
-    <div className="fx-day-list">
-      {activities.map((activity) => (
-        <div key={activity.id} className={cn("fx-day-row", activity.temporalState === "now" && "fx-day-row-active")}>
-          <span className="font-mono text-sm text-[var(--fx-muted)]">{activity.startTime}</span>
-          <div className="min-w-0">
-            <p className="truncate text-lg font-semibold text-white">{activity.title}</p>
-            <p className="text-sm text-[var(--fx-muted)]">{domainLabel(activity.category)} · {activity.endTime}</p>
-          </div>
-          <span className={cn("fx-badge fx-state-badge", activity.temporalState === "missed" && "is-missed")}>
-            {activity.temporalState === "missed" ? <XCircle className="h-4 w-4" aria-hidden="true" /> : null}
-            {label(activity.temporalState)}
-          </span>
-          <button className="fx-mini-button" type="button" onClick={() => onAction(activity, "complete")}>Done</button>
-        </div>
-      ))}
-    </div>
-  );
+  return <DayPlanningTimeline activities={activities} selectedDate={selectedDate} onAction={onAction} />;
 }
 
-function DayPlanningTimeline({ activities, onAction }: { activities: ExecutionActivity[]; onAction: (activity: ExecutionActivity, action: "complete" | "delay" | "end-early" | "miss") => void }) {
+function DayPlanningTimeline({ activities, onAction, selectedDate }: { activities: ExecutionActivity[]; onAction: (activity: ExecutionActivity, action: "complete" | "delay" | "end-early" | "miss") => void; selectedDate: string }) {
+  const now = useNowTick(1000);
   if (!activities.length) return <PanelEmpty title="No activity for this day" />;
-  const sorted = [...activities].sort((left, right) => toMinutes(left.startTime) - toMinutes(right.startTime));
+  const sorted = activities.flatMap((activity) => splitActivityForTimeline(activity, selectedDate, now)).sort((left, right) => toMinutes(left.startTime) - toMinutes(right.startTime));
   return (
     <div className="fx-planning-timeline">
-      {sorted.map((activity) => (
-        <div key={activity.id} className={cn("fx-timeline-block", activity.temporalState === "now" && "is-active", activity.temporalState === "missed" && "is-missed")}>
+      {sorted.map((item) => (
+        <div key={item.id} className={cn("fx-timeline-block", item.temporalState === "now" && "is-active", item.temporalState === "missed" && "is-missed")}>
           <div className="fx-timeline-time">
-            <span>{activity.startTime}</span>
-            <span>{activity.endTime}</span>
+            <span>{item.startTime}</span>
+            <span>{item.endTime}</span>
           </div>
           <div className="min-w-0">
-            <p className="truncate text-lg font-semibold text-white">{activity.title}</p>
-            <p className="text-sm text-[var(--fx-muted)]">{domainLabel(activity.category)}</p>
+            <p className="truncate text-lg font-semibold text-white">{item.activity.title}</p>
+            <p className="text-sm text-[var(--fx-muted)]">{domainLabel(item.activity.category)}</p>
           </div>
-          <span className={cn("fx-badge fx-state-badge", activity.temporalState === "missed" && "is-missed")}>
-            {activity.temporalState === "missed" ? <XCircle className="h-4 w-4" aria-hidden="true" /> : null}
-            {label(activity.temporalState)}
+          <span className={cn("fx-badge fx-state-badge", item.temporalState === "missed" && "is-missed")}>
+            {item.temporalState === "missed" ? <XCircle className="h-4 w-4" aria-hidden="true" /> : null}
+            {label(item.temporalState)}
           </span>
-          <button className="fx-icon-action danger" type="button" aria-label="Mark activity as not done" onClick={() => onAction(activity, "miss")}><XCircle className="h-4 w-4" /></button>
+          <button className="fx-miss-button" type="button" aria-label="Mark activity as not done" onClick={() => onAction(item.activity, "miss")}><XCircle className="h-4 w-4" /></button>
         </div>
       ))}
     </div>
@@ -597,7 +579,8 @@ function DayPlanningTimeline({ activities, onAction }: { activities: ExecutionAc
 }
 
 function TradingView({ accountDetail, accountFilter, selectedAccount, snapshot, onAccountBack, onAccountFilter, onAccountOpen, onAccountSelect, onAccountStatus, onAddPayout, onAddTrade, onResetAccount }: Parameters<typeof FocusView>[0]) {
-  const session = getTradingSession(new Date());
+  const now = useNowTick();
+  const session = getTradingSession(now);
   const accounts = filterAccounts(snapshot.accounts, accountFilter);
   const funded = selectedAccount?.phase === "funded";
   const accountTrades = accountDetail ? snapshot.trades.filter((trade) => trade.accountId === accountDetail.id) : [];
@@ -619,16 +602,20 @@ function TradingView({ accountDetail, accountFilter, selectedAccount, snapshot, 
   }
   return (
     <ContentGrid variant="focus">
-      <PrimaryPanel eyebrow={session.locked ? "LOCKED" : session.state}>
-        <ProgressRing progress={session.progress}>
+      <FocusPrimaryPanel
+        eyebrow={session.locked ? "LOCKED" : session.state}
+        ring={(
+          <ProgressRing progress={session.progress}>
           <div className="text-center">
             <p className="text-4xl font-semibold text-white">Trading</p>
-            <p className="mt-4 text-lg text-[var(--fx-muted)]">{formatTime(new Date())} · {session.name}</p>
+            <p className="mt-4 text-lg text-[var(--fx-muted)]">{formatTime(now)} - {session.name}</p>
             <div className="mx-auto mt-7 h-px w-40 bg-white/10" />
             <p className="mt-7 text-xl text-[var(--fx-accent)]">{session.label}</p>
           </div>
-        </ProgressRing>
-        <div className="fx-action-pair">
+          </ProgressRing>
+        )}
+        actions={(
+          <div className="fx-action-pair">
           <button className="fx-primary-action" type="button" disabled={!selectedAccount} onClick={onAddTrade}>
             <Plus className="h-5 w-5" aria-hidden="true" />
             Add a trade
@@ -637,12 +624,15 @@ function TradingView({ accountDetail, accountFilter, selectedAccount, snapshot, 
             <CircleDollarSign className="h-5 w-5" aria-hidden="true" />
             Add a payout
           </button>
-        </div>
-        <div className="fx-metrics-row">
+          </div>
+        )}
+        footer={(
+          <div className="fx-metrics-row">
           <Metric icon={CircleDollarSign} label="Daily P&L" value={formatMoney(snapshot.dailyPnl)} />
           <Metric icon={Target} label="Trades" value={String(snapshot.todayTrades.length)} />
-        </div>
-      </PrimaryPanel>
+          </div>
+        )}
+      />
       <SecondaryPanel eyebrow="ACCOUNTS">
         <div className="fx-panel-control-strip">
           <div className="fx-filter-row">
@@ -1160,6 +1150,20 @@ function PrimaryPanel({ children, eyebrow }: { children: ReactNode; eyebrow: str
   return <section className="fx-panel fx-primary-panel"><p className="fx-panel-eyebrow">{eyebrow}</p>{children}</section>;
 }
 
+function FocusPrimaryPanel({ actions, controls, eyebrow, footer, ring }: { actions?: ReactNode; controls?: ReactNode; eyebrow: string; footer?: ReactNode; ring: ReactNode }) {
+  return (
+    <section className={cn("fx-panel fx-primary-panel fx-focus-primary-panel", !actions && !footer && "fx-focus-primary-panel-expanded")}>
+      <div className="fx-focus-panel-header">
+        <p className="fx-panel-eyebrow">{eyebrow}</p>
+        <div className="fx-focus-panel-controls">{controls}</div>
+      </div>
+      <div className="fx-focus-ring-slot">{ring}</div>
+      <div className="fx-focus-actions-slot">{actions}</div>
+      <div className="fx-focus-footer-slot">{footer}</div>
+    </section>
+  );
+}
+
 function SecondaryPanel({ children, eyebrow }: { children: ReactNode; eyebrow: string }) {
   return <section className="fx-panel fx-secondary-panel"><p className="fx-panel-eyebrow">{eyebrow}</p>{children}</section>;
 }
@@ -1410,13 +1414,84 @@ function themeStyle(theme: AccentTheme): CSSProperties {
   return themes[theme];
 }
 
-function formatRemaining(activity: ExecutionActivity) {
-  const end = toMinutes(activity.endTime);
-  const current = getParisMinutes(new Date());
-  const adjustedEnd = end <= toMinutes(activity.startTime) && current < end ? end + 1440 : end;
-  const adjustedCurrent = adjustedEnd > 1440 && current < end ? current + 1440 : current;
+function useNowTick(intervalMs = 30000) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), intervalMs);
+    return () => window.clearInterval(interval);
+  }, [intervalMs]);
+
+  return now;
+}
+
+function formatRemaining(activity: ExecutionActivity, now = new Date()) {
+  const start = toSeconds(activity.startTime);
+  const end = toSeconds(activity.endTime);
+  const current = getParisSeconds(now);
+  const adjustedEnd = end <= start ? end + 86400 : end;
+  const adjustedCurrent = adjustedEnd > 86400 && current < end ? current + 86400 : current;
   const remaining = Math.max(0, adjustedEnd - adjustedCurrent);
-  return `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
+  return formatClockSeconds(remaining);
+}
+
+function getLiveActivityProgress(activity: ExecutionActivity, now = new Date()) {
+  const start = toSeconds(activity.startTime);
+  let end = toSeconds(activity.endTime);
+  let current = getParisSeconds(now);
+  if (end <= start) {
+    end += 86400;
+    if (current < toSeconds(activity.endTime)) current += 86400;
+  }
+  return Math.max(0, Math.min(1, (current - start) / Math.max(1, end - start)));
+}
+
+type TimelineActivity = {
+  activity: ExecutionActivity;
+  endTime: string;
+  id: string;
+  startTime: string;
+  temporalState: ActivityTemporalState;
+};
+
+function splitActivityForTimeline(activity: ExecutionActivity, selectedDate: string, now: Date): TimelineActivity[] {
+  const start = toMinutes(activity.startTime);
+  const end = toMinutes(activity.endTime);
+  const segments =
+    end > start
+      ? [{ endTime: activity.endTime, id: "main", startTime: activity.startTime }]
+      : [
+          end > 0 ? { endTime: activity.endTime, id: "morning", startTime: "00:00" } : null,
+          start < 1440 ? { endTime: "24:00", id: "evening", startTime: activity.startTime } : null,
+        ].filter((segment): segment is { endTime: string; id: string; startTime: string } => Boolean(segment));
+
+  return segments.map((segment) => ({
+    activity,
+    endTime: segment.endTime,
+    id: `${activity.id}:${segment.id}`,
+    startTime: segment.startTime,
+    temporalState: getTimelineTemporalState(activity, segment.startTime, segment.endTime, selectedDate, now),
+  }));
+}
+
+function getTimelineTemporalState(activity: ExecutionActivity, startTime: string, endTime: string, selectedDate: string, now: Date): ActivityTemporalState {
+  const today = getTodayIsoDate();
+  if (activity.status === "missed" || activity.temporalState === "missed") return "missed";
+  if (activity.status === "completed" || activity.finishedAt || selectedDate < today) return "done";
+  if (selectedDate > today) return "upcoming";
+  const current = getParisMinutes(now);
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  if (current >= end) return "done";
+  if (current >= start) return "now";
+  return "upcoming";
+}
+
+function formatClockSeconds(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatDate(date: Date) {
@@ -1446,9 +1521,22 @@ function getParisMinutes(date: Date) {
   return Number(parts.find((part) => part.type === "hour")?.value ?? 0) * 60 + Number(parts.find((part) => part.type === "minute")?.value ?? 0);
 }
 
+function getParisSeconds(date: Date) {
+  const parts = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", hour12: false, minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" }).formatToParts(date);
+  const hours = Number(parts.find((part) => part.type === "hour")?.value ?? 0) % 24;
+  const minutes = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  const seconds = Number(parts.find((part) => part.type === "second")?.value ?? 0);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 function toMinutes(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
   return (hours || 0) * 60 + (minutes || 0);
+}
+
+function toSeconds(value: string) {
+  const [hours, minutes, seconds] = value.split(":").map(Number);
+  return (hours || 0) * 3600 + (minutes || 0) * 60 + (seconds || 0);
 }
 
 function domainLabel(value: string) {

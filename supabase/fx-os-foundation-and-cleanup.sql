@@ -194,8 +194,9 @@ create policy "Users manage fx_journal_entries" on public.fx_journal_entries
 for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Destructive legacy cleanup: old dashboard stats, Chrome-extension/screen-time
--- metrics, green/red journal stats, quests/self-care, lists and playbooks.
+-- metrics, green/red journal stats, quests, lists and playbooks.
 -- Keep trading_* and life_schedule_blocks because Focus Planning/Trading use them.
+-- Keep fpair_health_days because Health Connect mobile sync and Self Care history use it.
 
 drop view if exists public.trading_user_stats cascade;
 
@@ -214,7 +215,6 @@ drop table if exists public.dashboard_settings cascade;
 
 drop table if exists public.fpair_quest_results cascade;
 drop table if exists public.fpair_quests cascade;
-drop table if exists public.fpair_health_days cascade;
 drop table if exists public.fpair_list_items cascade;
 drop table if exists public.life_system_health_days cascade;
 
