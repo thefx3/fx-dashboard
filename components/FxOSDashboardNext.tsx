@@ -103,7 +103,7 @@ type ModalKind =
   | "journal"
   | "logs"
   | null;
-type AccentTheme = "teal" | "gold" | "violet";
+type AccentTheme = "teal" | "gold" | "violet" | "blue" | "emerald" | "rose" | "white";
 type PrivateFilter = PrivateCategory | "all" | "completed";
 
 type FxOSDashboardProps = {
@@ -125,6 +125,7 @@ const workStatuses: WorkStatus[] = ["todo", "active", "completed"];
 const projectStatuses: Project["status"][] = ["active", "paused", "archived"];
 const workspaceStatuses: Workspace["status"][] = ["active", "paused", "terminated"];
 const accountFilters = ["all", "active", "eval", "funded", "live", "blown"] as const;
+const accentThemes: AccentTheme[] = ["teal", "gold", "violet", "blue", "emerald", "rose", "white"];
 const statusIcons: Record<string, typeof Play> = {
   active: Play,
   all: LayoutList,
@@ -209,15 +210,18 @@ export default function FxOSDashboardNext({ email, initialFocusTab = "planning",
   const selectedProject = useMemo(() => snapshot?.projects.find((project) => project.id === selectedProjectId) ?? snapshot?.activeProject ?? snapshot?.projects[0] ?? null, [selectedProjectId, snapshot]);
   const workspaceDetail = useMemo(() => snapshot?.workspaces.find((workspace) => workspace.id === workspaceDetailId) ?? null, [snapshot, workspaceDetailId]);
   const projectDetail = useMemo(() => snapshot?.projects.find((project) => project.id === projectDetailId) ?? null, [projectDetailId, snapshot]);
+  const currentLogTarget = useMemo(() => logTarget && snapshot ? resolveLogTarget(snapshot, logTarget) ?? logTarget : logTarget, [logTarget, snapshot]);
 
-  const run = useCallback(async (key: string, action: () => Promise<void>) => {
+  const run = useCallback(async (key: string, action: () => Promise<void>, options: { closeModal?: boolean } = {}) => {
     if (!userId) return;
     setPending(key);
     setError("");
     try {
       await action();
       await refresh(userId, selectedDate);
-      setModal(null);
+      if (options.closeModal !== false) {
+        setModal(null);
+      }
     } catch (actionError) {
       setError(getActionErrorMessage(actionError));
     } finally {
@@ -371,13 +375,13 @@ export default function FxOSDashboardNext({ email, initialFocusTab = "planning",
         {modal === "project-item" && userId && selectedProject ? <TaskForm pending={pending} targetLabel={selectedProject.title} onSubmit={(input) => run("project-item", () => saveProjectItem(userId, { ...input, projectId: selectedProject.id }))} /> : null}
         {modal === "private-item" && userId ? <PrivateItemForm area={privateArea} pending={pending} onSubmit={(input) => run("private-item", () => savePrivateItem(userId, input))} /> : null}
         {modal === "journal" && userId ? <JournalForm pending={pending} onSubmit={(text) => run("journal", () => saveJournalEntry(userId, text))} /> : null}
-        {modal === "logs" && userId && logTarget ? (
+        {modal === "logs" && userId && currentLogTarget ? (
           <LogsForm
-            item={logTarget.item}
+            item={currentLogTarget.item}
             pending={pending}
-            onAdd={(body) => run(`logs-add:${logTarget.item.id}`, () => logTarget.type === "project" ? addProjectItemLog(userId, logTarget.item.id, body) : addWorkspaceTaskLog(userId, logTarget.item.id, body))}
-            onDelete={(logId) => run(`logs-delete:${logId}`, () => logTarget.type === "project" ? deleteProjectItemLog(userId, logId) : deleteWorkspaceTaskLog(userId, logId))}
-            onUpdate={(logId, body) => run(`logs-update:${logId}`, () => logTarget.type === "project" ? updateProjectItemLog(userId, logId, body) : updateWorkspaceTaskLog(userId, logId, body))}
+            onAdd={(body) => run(`logs-add:${currentLogTarget.item.id}`, () => currentLogTarget.type === "project" ? addProjectItemLog(userId, currentLogTarget.item.id, body) : addWorkspaceTaskLog(userId, currentLogTarget.item.id, body), { closeModal: false })}
+            onDelete={(logId) => run(`logs-delete:${logId}`, () => currentLogTarget.type === "project" ? deleteProjectItemLog(userId, logId) : deleteWorkspaceTaskLog(userId, logId), { closeModal: false })}
+            onUpdate={(logId, body) => run(`logs-update:${logId}`, () => currentLogTarget.type === "project" ? updateProjectItemLog(userId, logId, body) : updateWorkspaceTaskLog(userId, logId, body), { closeModal: false })}
           />
         ) : null}
       </FxModal>
@@ -418,7 +422,7 @@ function Sidebar({ activeView, email, theme, onNavigate, onTheme }: { activeView
           </button>
           {open ? (
             <div className="fx-theme-menu">
-              {(["teal", "gold", "violet"] as AccentTheme[]).map((item) => (
+              {accentThemes.map((item) => (
                 <button key={item} className={cn("fx-theme-dot", `fx-theme-dot-${item}`, theme === item && "is-active")} type="button" aria-label={`Set ${item} theme`} onClick={() => { onTheme(item); setOpen(false); }} />
               ))}
             </div>
@@ -512,16 +516,16 @@ function PlanningView({ pending, planningMode, selectedDate, snapshot, onPlannin
           </div>
         )}
         ring={planningMode === "ring" ? <PlanningRing activity={snapshot.currentActivity} nextActivity={snapshot.nextActivity} /> : <DayPlanningList activities={snapshot.selectedDateActivities} selectedDate={selectedDate} onAction={onPlanningAction} />}
-        actions={planningMode === "ring" && snapshot.currentActivity ? (
-          <button className="fx-primary-action" disabled={pending === `complete:${snapshot.currentActivity.id}`} type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "complete")}>
+        actions={planningMode === "ring" ? (
+          <button className="fx-primary-action" disabled={!snapshot.currentActivity || pending === `complete:${snapshot.currentActivity?.id ?? ""}`} type="button" onClick={() => snapshot.currentActivity && onPlanningAction(snapshot.currentActivity, "complete")}>
             <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
             Complete
           </button>
         ) : null}
-        footer={planningMode === "ring" && snapshot.currentActivity ? (
+        footer={planningMode === "ring" ? (
           <div className="fx-secondary-actions">
-            <button type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "miss")}><XCircle className="h-4 w-4" />Not done</button>
-            <button type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "end-early")}><Square className="h-4 w-4" />End early</button>
+            <button type="button" disabled={!snapshot.currentActivity} onClick={() => snapshot.currentActivity && onPlanningAction(snapshot.currentActivity, "miss")}><XCircle className="h-4 w-4" />Not done</button>
+            <button type="button" disabled={!snapshot.currentActivity} onClick={() => snapshot.currentActivity && onPlanningAction(snapshot.currentActivity, "end-early")}><Square className="h-4 w-4" />End early</button>
           </div>
         ) : null}
       />
@@ -1326,6 +1330,16 @@ function getActionErrorMessage(error: unknown) {
   return "Action failed.";
 }
 
+function resolveLogTarget(snapshot: FxOSSnapshot, target: { item: ProjectItem | WorkTask; type: "project" | "work" }) {
+  if (target.type === "project") {
+    const item = snapshot.projects.flatMap((project) => project.items).find((projectItem) => projectItem.id === target.item.id);
+    return item ? { item, type: "project" as const } : null;
+  }
+
+  const item = snapshot.workspaces.flatMap((workspace) => workspace.tasks).find((task) => task.id === target.item.id);
+  return item ? { item, type: "work" as const } : null;
+}
+
 function orderedNext<T extends { position: number; status: WorkStatus }>(items: T[]) {
   return [...items].filter((item) => item.status !== "completed" && item.status !== "later").sort((a, b) => a.position - b.position).slice(0, 6);
 }
@@ -1413,6 +1427,33 @@ function themeStyle(theme: AccentTheme): CSSProperties {
       "--fx-border-strong": "rgba(245, 185, 103, 0.58)",
       "--fx-surface": "rgba(28, 27, 24, 0.68)",
     } as CSSProperties,
+    blue: {
+      "--fx-accent": "#5EA8FF",
+      "--fx-accent-rgb": "94, 168, 255",
+      "--fx-accent-glow": "rgba(94, 168, 255, 0.3)",
+      "--fx-accent-soft": "rgba(94, 168, 255, 0.08)",
+      "--fx-border": "rgba(94, 168, 255, 0.17)",
+      "--fx-border-strong": "rgba(94, 168, 255, 0.54)",
+      "--fx-surface": "rgba(13, 24, 36, 0.68)",
+    } as CSSProperties,
+    emerald: {
+      "--fx-accent": "#6EF6A4",
+      "--fx-accent-rgb": "110, 246, 164",
+      "--fx-accent-glow": "rgba(110, 246, 164, 0.28)",
+      "--fx-accent-soft": "rgba(110, 246, 164, 0.08)",
+      "--fx-border": "rgba(110, 246, 164, 0.16)",
+      "--fx-border-strong": "rgba(110, 246, 164, 0.52)",
+      "--fx-surface": "rgba(13, 31, 24, 0.68)",
+    } as CSSProperties,
+    rose: {
+      "--fx-accent": "#FF7AA8",
+      "--fx-accent-rgb": "255, 122, 168",
+      "--fx-accent-glow": "rgba(255, 122, 168, 0.28)",
+      "--fx-accent-soft": "rgba(255, 122, 168, 0.08)",
+      "--fx-border": "rgba(255, 122, 168, 0.17)",
+      "--fx-border-strong": "rgba(255, 122, 168, 0.54)",
+      "--fx-surface": "rgba(34, 16, 26, 0.68)",
+    } as CSSProperties,
     teal: {
       "--fx-accent": "#20E0D0",
       "--fx-accent-rgb": "32, 224, 208",
@@ -1430,6 +1471,15 @@ function themeStyle(theme: AccentTheme): CSSProperties {
       "--fx-border": "rgba(169, 112, 255, 0.18)",
       "--fx-border-strong": "rgba(169, 112, 255, 0.58)",
       "--fx-surface": "rgba(22, 14, 33, 0.68)",
+    } as CSSProperties,
+    white: {
+      "--fx-accent": "#F4F7F7",
+      "--fx-accent-rgb": "244, 247, 247",
+      "--fx-accent-glow": "rgba(244, 247, 247, 0.22)",
+      "--fx-accent-soft": "rgba(244, 247, 247, 0.07)",
+      "--fx-border": "rgba(244, 247, 247, 0.15)",
+      "--fx-border-strong": "rgba(244, 247, 247, 0.44)",
+      "--fx-surface": "rgba(24, 28, 28, 0.68)",
     } as CSSProperties,
   };
   return themes[theme];

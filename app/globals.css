@@ -920,6 +920,11 @@ h6 {
   outline: none;
 }
 
+.fx-secondary-actions button:disabled {
+  color: rgba(143, 163, 163, 0.34);
+  cursor: not-allowed;
+}
+
 .fx-metric {
   align-items: center;
   color: rgba(244, 247, 247, 0.72);
@@ -1251,8 +1256,7 @@ h6 {
 .fx-account-row,
 .fx-task-row,
 .fx-container-row,
-.fx-private-item-line,
-.fx-log-row {
+.fx-private-item-line {
   align-items: center;
   background: rgba(5, 10, 11, 0.34);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1491,6 +1495,7 @@ h6 {
 
 .fx-log-row {
   grid-template-columns: minmax(0, 1fr) auto auto auto;
+  padding: 0.1rem 0;
 }
 
 .fx-plan-summary {
@@ -1546,6 +1551,22 @@ h6 {
 
 .fx-theme-dot-violet {
   background: #a970ff;
+}
+
+.fx-theme-dot-blue {
+  background: #5ea8ff;
+}
+
+.fx-theme-dot-emerald {
+  background: #6ef6a4;
+}
+
+.fx-theme-dot-rose {
+  background: #ff7aa8;
+}
+
+.fx-theme-dot-white {
+  background: #f4f7f7;
 }
 
 .fx-doc-column {
