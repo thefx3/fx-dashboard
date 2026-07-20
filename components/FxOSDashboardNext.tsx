@@ -217,7 +217,7 @@ export default function FxOSDashboardNext({ email, initialFocusTab = "planning",
       await refresh(userId, selectedDate);
       setModal(null);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : "Action failed.");
+      setError(getActionErrorMessage(actionError));
     } finally {
       setPending("");
     }
@@ -1310,6 +1310,12 @@ function modalTitle(kind: ModalKind) {
     workspace: "Add workspace",
     "workspace-task": "Add task",
   } as Record<Exclude<ModalKind, null>, string>)[kind ?? "activity"] ?? "";
+}
+
+function getActionErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) return String((error as { message?: unknown }).message);
+  return "Action failed.";
 }
 
 function orderedNext<T extends { position: number; status: WorkStatus }>(items: T[]) {

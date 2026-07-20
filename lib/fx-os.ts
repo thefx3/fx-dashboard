@@ -617,15 +617,20 @@ export async function savePrivateItem(userId: string, input: {
   deadline: string | null;
   title: string;
 }) {
-  const { error } = await supabase.from("fx_private_items").insert({
+  const row = {
     area: input.area,
     category: input.category,
     content: input.content,
-    deadline: input.deadline,
     id: createId("private"),
     title: input.title,
     user_id: userId,
-  });
+  };
+  const { error } = await supabase.from("fx_private_items").insert({ ...row, deadline: input.deadline });
+  if (isMissingColumnError(error, "deadline")) {
+    const retry = await supabase.from("fx_private_items").insert(row);
+    if (retry.error) throw retry.error;
+    return;
+  }
   if (error) throw error;
 }
 
@@ -736,9 +741,26 @@ async function readProjects(userId: string): Promise<Project[]> {
 }
 
 async function readPrivateItems(userId: string): Promise<PrivateItem[]> {
-  const { data, error } = await supabase.from("fx_private_items").select("*").eq("user_id", userId).order("created_at", { ascending: true });
+  const { data, error } = await supabase
+    .from("fx_private_items")
+    .select("id,area,category,title,content,deadline,completed,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  if (isMissingColumnError(error, "deadline")) {
+    const fallback = await supabase
+      .from("fx_private_items")
+      .select("id,area,category,title,content,completed,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+    if (fallback.error) return [];
+    return rowsToPrivateItems(fallback.data ?? []);
+  }
   if (error) return [];
-  return ((data ?? []) as JsonRecord[]).map((row) => ({
+  return rowsToPrivateItems(data ?? []);
+}
+
+function rowsToPrivateItems(rows: unknown[]): PrivateItem[] {
+  return (rows as JsonRecord[]).map((row) => ({
     area: normalizePrivateArea(row.area),
     category: normalizePrivateCategory(row.category),
     completed: row.completed === true,
@@ -1110,6 +1132,17 @@ function numberValue(value: unknown, fallback: number) {
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function isMissingColumnError(error: unknown, column: string) {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      "message" in error &&
+      (error as { code?: unknown; message?: unknown }).code === "42703" &&
+      String((error as { message?: unknown }).message).includes(column),
+  );
 }
 
 function createId(prefix: string) {
