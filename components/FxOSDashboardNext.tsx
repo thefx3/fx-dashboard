@@ -60,6 +60,7 @@ import {
   setWorkspaceStatus,
   subscribeFxOS,
   updateAccountStatus,
+  updatePrivateItem,
   updateProject,
   updateProjectItem,
   updateProjectItemLog,
@@ -72,6 +73,7 @@ import {
   type LifeDomain,
   type PrivateAreaId,
   type PrivateCategory,
+  type PrivateItem,
   type Project,
   type ProjectItem,
   type TradingAccount,
@@ -102,7 +104,7 @@ type ModalKind =
   | "logs"
   | null;
 type AccentTheme = "teal" | "gold" | "violet";
-type PrivateFilter = PrivateCategory | "all";
+type PrivateFilter = PrivateCategory | "all" | "completed";
 
 type FxOSDashboardProps = {
   email: string;
@@ -350,6 +352,7 @@ export default function FxOSDashboardNext({ email, initialFocusTab = "planning",
                 onFilter={setPrivateFilter}
                 onJournal={() => setModal("journal")}
                 onPrivateItem={() => setModal("private-item")}
+                onPrivateItemCompleted={(item) => userId && run(`private-complete:${item.id}`, () => updatePrivateItem(userId, item.id, { completed: !item.completed }))}
               />
             ) : null}
           </>
@@ -508,7 +511,7 @@ function PlanningView({ pending, planningMode, selectedDate, snapshot, onPlannin
             <button className={cn(planningMode === "day" && "is-active")} type="button" aria-label="Day list view" onClick={() => onPlanningMode("day")}><LayoutList className="h-4 w-4" /></button>
           </div>
         )}
-        ring={planningMode === "ring" ? <PlanningRing activity={snapshot.currentActivity} /> : <DayPlanningList activities={snapshot.selectedDateActivities} selectedDate={selectedDate} onAction={onPlanningAction} />}
+        ring={planningMode === "ring" ? <PlanningRing activity={snapshot.currentActivity} nextActivity={snapshot.nextActivity} /> : <DayPlanningList activities={snapshot.selectedDateActivities} selectedDate={selectedDate} onAction={onPlanningAction} />}
         actions={planningMode === "ring" && snapshot.currentActivity ? (
           <button className="fx-primary-action" disabled={pending === `complete:${snapshot.currentActivity.id}`} type="button" onClick={() => onPlanningAction(snapshot.currentActivity!, "complete")}>
             <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
@@ -529,18 +532,20 @@ function PlanningView({ pending, planningMode, selectedDate, snapshot, onPlannin
   );
 }
 
-function PlanningRing({ activity, compact = false }: { activity: ExecutionActivity | null; compact?: boolean }) {
+function PlanningRing({ activity, compact = false, nextActivity }: { activity: ExecutionActivity | null; compact?: boolean; nextActivity?: ExecutionActivity | null }) {
   const now = useNowTick(1000);
-  if (!activity) return <EmptyFocus title="Free" text="No active activity right now." />;
+  const displayActivity = activity ?? nextActivity ?? null;
+  const active = Boolean(activity);
+  const progress = activity ? getLiveActivityProgress(activity, now) : nextActivity ? getNextActivityCountdownProgress(nextActivity, now) : 0;
   return (
-    <ProgressRing progress={getLiveActivityProgress(activity, now)}>
+    <ProgressRing progress={progress}>
       <div className="text-center">
-        <p className={cn("font-semibold text-white", compact ? "text-5xl" : "text-4xl")}>{domainLabel(activity.category)}</p>
-        <p className="mt-4 text-lg text-[var(--fx-muted)]">{activity.title}</p>
-        <p className="mt-5 font-mono text-xl text-white/75">{activity.startTime} - {activity.endTime}</p>
+        <p className={cn("font-semibold text-white", compact ? "text-5xl" : "text-4xl")}>{displayActivity ? domainLabel(displayActivity.category) : "Clear"}</p>
+        <p className="mt-4 text-lg text-[var(--fx-muted)]">{displayActivity ? displayActivity.title : "No upcoming activity"}</p>
+        <p className="mt-5 font-mono text-xl text-white/75">{displayActivity ? `${displayActivity.startTime} - ${displayActivity.endTime}` : "--:--"}</p>
         <div className="mx-auto mt-7 h-px w-40 bg-white/10" />
-        <p className="mt-6 font-mono text-5xl font-semibold text-[var(--fx-accent)]">{formatRemaining(activity, now)}</p>
-        <p className="mt-2 text-sm text-[var(--fx-muted)]">remaining</p>
+        <p className="mt-6 font-mono text-5xl font-semibold text-[var(--fx-accent)]">{activity ? formatRemaining(activity, now) : nextActivity ? formatUntilStart(nextActivity, now) : "--:--:--"}</p>
+        <p className="mt-2 text-sm text-[var(--fx-muted)]">{active ? "remaining" : "until next"}</p>
       </div>
     </ProgressRing>
   );
@@ -816,10 +821,10 @@ function ProjectsView({ detailProject, filter, pending, selectedProject, snapsho
   );
 }
 
-function PrivateView({ area, filter, snapshot, onArea, onBack, onFilter, onJournal, onPrivateItem }: { area: PrivateAreaId | null; filter: PrivateFilter; snapshot: FxOSSnapshot; onArea: (area: PrivateAreaId) => void; onBack: () => void; onFilter: (filter: PrivateFilter) => void; onJournal: () => void; onPrivateItem: () => void }) {
+function PrivateView({ area, filter, snapshot, onArea, onBack, onFilter, onJournal, onPrivateItem, onPrivateItemCompleted }: { area: PrivateAreaId | null; filter: PrivateFilter; snapshot: FxOSSnapshot; onArea: (area: PrivateAreaId) => void; onBack: () => void; onFilter: (filter: PrivateFilter) => void; onJournal: () => void; onPrivateItem: () => void; onPrivateItemCompleted: (item: PrivateItem) => void }) {
   const recent = [...snapshot.privateItems].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
   const activeArea = area ? privateAreas.find((item) => item.id === area) : null;
-  const areaItems = sortPrivateItems(snapshot.privateItems.filter((item) => item.area === area && (filter === "all" || item.category === filter)));
+  const areaItems = sortPrivateItems(snapshot.privateItems.filter((item) => item.area === area && matchesPrivateFilter(item, filter)));
   if (activeArea) {
     const Icon = activeArea.icon;
     return (
@@ -828,12 +833,12 @@ function PrivateView({ area, filter, snapshot, onArea, onBack, onFilter, onJourn
           <Breadcrumb root="Private" current={activeArea.title} onBack={onBack} />
           <PanelHeader eyebrow={activeArea.title} icon={<div className="fx-square-icon"><Icon className="h-6 w-6" /></div>} subtitle={activeArea.subtitle} title={activeArea.title}>
             <div className="fx-toolbar-row compact">
-              <FilterControls values={["all", "todo", "buy", "watch", "read"]} value={filter} onChange={(value) => onFilter(value as PrivateFilter)} />
+              <FilterControls values={["all", "todo", "buy", "watch", "read", "completed"]} value={filter} onChange={(value) => onFilter(value as PrivateFilter)} />
               <button className="fx-icon-action" type="button" onClick={area === "finance" ? onJournal : onPrivateItem} aria-label={area === "finance" ? "Add journal" : "Add private item"}><Plus className="h-4 w-4" /></button>
             </div>
           </PanelHeader>
           {area === "finance" ? <JournalPreview entries={snapshot.journal} /> : null}
-          <PrivateItemList items={areaItems} />
+          <PrivateItemList items={areaItems} onCompleted={onPrivateItemCompleted} />
         </section>
       </ContentGrid>
     );
@@ -860,18 +865,21 @@ function PrivateView({ area, filter, snapshot, onArea, onBack, onFilter, onJourn
       </section>
       <section className="fx-panel">
         <p className="fx-panel-eyebrow">RECENT</p>
-        <PrivateItemList items={recent} />
+        <PrivateItemList items={recent} onCompleted={onPrivateItemCompleted} />
       </section>
     </ContentGrid>
   );
 }
 
-function PrivateItemList({ items }: { items: Array<{ category: PrivateCategory; content: string; createdAt?: string; deadline: string | null; id: string; title: string }> }) {
+function PrivateItemList({ items, onCompleted }: { items: PrivateItem[]; onCompleted: (item: PrivateItem) => void }) {
   if (!items.length) return <PanelEmpty title="No item" />;
   return (
     <div className="fx-private-list">
       {items.map((item) => (
-        <div key={item.id} className="fx-private-item-line">
+        <div key={item.id} className={cn("fx-private-item-line", item.completed && "is-completed")}>
+          <button className={cn("fx-icon-action", item.completed && "is-active")} type="button" aria-label={item.completed ? "Mark private item as incomplete" : "Mark private item as completed"} onClick={() => onCompleted(item)}>
+            <CheckCircle2 className="h-4 w-4" />
+          </button>
           <div className="min-w-0">
             <p className="truncate font-semibold text-white">{item.title}</p>
             <p className="truncate text-sm text-[var(--fx-muted)]">{item.deadline ? `Deadline ${item.deadline}` : item.content || formatShortDate(item.createdAt ?? "")}</p>
@@ -1380,11 +1388,18 @@ function subtitleFor(view: FxOSMainView) {
 
 function sortPrivateItems<T extends { createdAt: string; deadline: string | null }>(items: T[]): T[] {
   return [...items].sort((left, right) => {
+    if ("completed" in left && "completed" in right && left.completed !== right.completed) return left.completed ? 1 : -1;
     if (left.deadline && right.deadline) return left.deadline.localeCompare(right.deadline);
     if (left.deadline) return -1;
     if (right.deadline) return 1;
     return left.createdAt.localeCompare(right.createdAt);
   });
+}
+
+function matchesPrivateFilter(item: PrivateItem, filter: PrivateFilter) {
+  if (filter === "all") return true;
+  if (filter === "completed") return item.completed;
+  return item.category === filter;
 }
 
 function themeStyle(theme: AccentTheme): CSSProperties {
@@ -1441,6 +1456,13 @@ function formatRemaining(activity: ExecutionActivity, now = new Date()) {
   return formatClockSeconds(remaining);
 }
 
+function formatUntilStart(activity: ExecutionActivity, now = new Date()) {
+  const start = toSeconds(activity.startTime);
+  const current = getParisSeconds(now);
+  const nextStart = start >= current ? start : start + 86400;
+  return formatClockSeconds(Math.max(0, nextStart - current));
+}
+
 function getLiveActivityProgress(activity: ExecutionActivity, now = new Date()) {
   const start = toSeconds(activity.startTime);
   let end = toSeconds(activity.endTime);
@@ -1450,6 +1472,15 @@ function getLiveActivityProgress(activity: ExecutionActivity, now = new Date()) 
     if (current < toSeconds(activity.endTime)) current += 86400;
   }
   return Math.max(0, Math.min(1, (current - start) / Math.max(1, end - start)));
+}
+
+function getNextActivityCountdownProgress(activity: ExecutionActivity, now = new Date()) {
+  const start = toSeconds(activity.startTime);
+  const current = getParisSeconds(now);
+  if (start >= current) {
+    return Math.max(0, Math.min(1, current / Math.max(1, start)));
+  }
+  return Math.max(0, Math.min(1, current / 86400));
 }
 
 type TimelineActivity = {

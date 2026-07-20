@@ -634,6 +634,19 @@ export async function savePrivateItem(userId: string, input: {
   if (error) throw error;
 }
 
+export async function updatePrivateItem(userId: string, itemId: string, patch: Partial<Pick<PrivateItem, "completed" | "content" | "deadline" | "title">>) {
+  const payload = { ...patch, updated_at: new Date().toISOString() };
+  const { error } = await supabase.from("fx_private_items").update(payload).eq("user_id", userId).eq("id", itemId);
+  if (isMissingColumnError(error, "deadline")) {
+    const fallbackPatch: Record<string, unknown> = { ...patch };
+    delete fallbackPatch.deadline;
+    const retry = await supabase.from("fx_private_items").update({ ...fallbackPatch, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("id", itemId);
+    if (retry.error) throw retry.error;
+    return;
+  }
+  if (error) throw error;
+}
+
 export async function saveJournalEntry(userId: string, text: string, entryDate = getTodayIsoDate()) {
   const { error } = await supabase.from("fx_journal_entries").insert({
     entry_date: entryDate,

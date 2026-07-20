@@ -1428,7 +1428,16 @@ h6 {
 }
 
 .fx-private-item-line {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.fx-private-item-line.is-completed {
+  opacity: 0.58;
+}
+
+.fx-private-item-line.is-completed p:first-child {
+  text-decoration: line-through;
+  text-decoration-color: rgba(var(--fx-accent-rgb), 0.55);
 }
 
 .fx-trade-history {
